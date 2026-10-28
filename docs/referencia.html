@@ -58,13 +58,14 @@
   <thead><tr><th>Variável</th><th>Padrão</th><th>Função</th></tr></thead>
   <tbody>
     <tr><td><code>OMNIDUDE_DATA_DIR</code></td><td><code>./data</code></td><td>Onde ficam <code>omnidude.db</code> e <code>secret.key</code>. Faça backup dos dois.</td></tr>
-    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta. Para expor na rede, use TLS ou um proxy reverso.</td></tr>
+    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta: <code>127.0.0.1</code> (só a própria máquina), <code>0.0.0.0</code> (todas as interfaces) ou o IP de uma interface. Fora de <code>127.0.0.1</code>, prefira TLS ou proxy (<a href="instalacao.html#acessar-de-outras-maquinas-https">Instalação</a>).</td></tr>
     <tr><td><code>OMNIDUDE_PORT</code></td><td><code>8080</code></td><td>Porta HTTP.</td></tr>
     <tr><td><code>OMNIDUDE_SECRET_KEY</code></td><td>(arquivo)</td><td>Chave AES-256 em base64 (32 bytes), por exemplo <code>openssl rand -base64 32</code>. Sem ela, é gerada em <code>secret.key</code>.</td></tr>
     <tr><td><code>OMNIDUDE_ADMIN_PASSWORD</code></td><td>(aleatória)</td><td>Senha inicial do <code>admin</code>; dispensa a troca obrigatória.</td></tr>
     <tr><td><code>OMNIDUDE_FORWARD_HEADERS</code></td><td><code>none</code></td><td>Atrás de proxy reverso, use <code>native</code> (confia em <code>X-Forwarded-*</code> só dos proxies abaixo). Evite <code>framework</code>.</td></tr>
     <tr><td><code>OMNIDUDE_TRUSTED_PROXIES</code></td><td>só a própria máquina</td><td>Expressão regular dos IPs de proxy confiáveis.</td></tr>
     <tr><td><code>OMNIDUDE_COOKIE_SECURE</code></td><td><code>false</code></td><td><code>true</code> atrás de HTTPS: o cookie de sessão só trafega por TLS.</td></tr>
+    <tr><td><code>SERVER_SSL_ENABLED</code>, <code>SERVER_SSL_KEY_STORE</code>, <code>SERVER_SSL_KEY_STORE_PASSWORD</code>, <code>SERVER_SSL_KEY_STORE_TYPE</code></td><td>(desligado)</td><td>TLS no próprio OmniDude, com um certificado PKCS12 (<code>PKCS12</code>). Use com <code>OMNIDUDE_COOKIE_SECURE=true</code>. Veja <a href="instalacao.html#tls-no-proprio-omnidude">Opção B</a>.</td></tr>
     <tr><td><code>JAVA_OPTS</code> (systemd)</td><td><code>-Xms128m -Xmx512m -XX:+ExitOnOutOfMemoryError</code></td><td>Opções da JVM no serviço.</td></tr>
   </tbody>
 </table>

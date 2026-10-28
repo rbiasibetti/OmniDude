@@ -149,13 +149,27 @@ Detalhes, proxy reverso com HTTPS, atualização e remoção em [INSTALL.md](INS
 | Variável | Padrão | Função |
 |---|---|---|
 | `OMNIDUDE_DATA_DIR` | `./data` | Onde ficam `omnidude.db` e `secret.key`. **Faça backup dos dois.** |
-| `OMNIDUDE_BIND` | `127.0.0.1` | Endereço de escuta. Para expor na rede, use TLS (`server.ssl.*`) ou um proxy reverso |
+| `OMNIDUDE_BIND` | `127.0.0.1` | Endereço de escuta: `127.0.0.1` (só a própria máquina), `0.0.0.0` (todas as interfaces) ou o IP de uma interface. Fora de `127.0.0.1`, prefira TLS ou proxy (veja abaixo) |
 | `OMNIDUDE_PORT` | `8080` | Porta HTTP |
 | `OMNIDUDE_SECRET_KEY` | (arquivo) | Chave AES-256 em base64 (32 bytes). Sem ela, é gerada em `secret.key` |
 | `OMNIDUDE_ADMIN_PASSWORD` | (aleatória) | Senha inicial do `admin`; dispensa a troca obrigatória |
 | `OMNIDUDE_FORWARD_HEADERS` | `none` | Atrás de proxy reverso, use `native` (confia em `X-Forwarded-*` só dos proxies abaixo). Evite `framework` |
 | `OMNIDUDE_TRUSTED_PROXIES` | só a própria máquina | Expressão regular dos IPs de proxy confiáveis |
-| `OMNIDUDE_COOKIE_SECURE` | `false` | `true` atrás de HTTPS: o cookie de sessão só trafega por TLS |
+| `OMNIDUDE_COOKIE_SECURE` | `false` | `true` com HTTPS (proxy ou TLS próprio): o cookie de sessão só trafega por TLS. Com HTTP puro, deixe `false` |
+| `SERVER_SSL_ENABLED`, `SERVER_SSL_KEY_STORE`, `SERVER_SSL_KEY_STORE_PASSWORD`, `SERVER_SSL_KEY_STORE_TYPE` | desligado | TLS no próprio OmniDude, com certificado PKCS12 (`PKCS12`) |
+
+#### Acessar pelo IP da máquina
+
+Há três opções, da mais simples à mais indicada:
+
+1. **HTTP na rede.** `OMNIDUDE_BIND=0.0.0.0` e abra `http://IP-DA-MAQUINA:8080`. Libere a porta no firewall. A senha e a
+   sessão trafegam **sem criptografia** (o log avisa): só em rede interna confiável. Não ligue `OMNIDUDE_COOKIE_SECURE`.
+2. **TLS no próprio OmniDude.** `OMNIDUDE_BIND=0.0.0.0` com `SERVER_SSL_*` apontando para um `.p12` e
+   `OMNIDUDE_COOKIE_SECURE=true`; acesse `https://IP-DA-MAQUINA:8443`.
+3. **Proxy reverso com HTTPS** (recomendada): mantenha `127.0.0.1` e use `OMNIDUDE_FORWARD_HEADERS=native`.
+
+Passo a passo, exemplos de firewall, `keytool` e nginx em [INSTALL.md](INSTALL.md) e no
+[manual](https://rbiasibetti.github.io/OmniDude/instalacao.html).
 
 > `secret.key` cifra as credenciais SNMP guardadas no banco. Sem a chave, os perfis SNMP existentes ficam
 > inutilizáveis: copie-a junto com o banco.

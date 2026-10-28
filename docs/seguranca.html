@@ -59,7 +59,7 @@
 <table>
   <thead><tr><th>Área</th><th>O que é feito</th></tr></thead>
   <tbody>
-    <tr><td>Rede</td><td>Escuta só em <code>127.0.0.1</code>. Um aviso aparece no log se você expõe sem TLS nem proxy.</td></tr>
+    <tr><td>Rede</td><td>Escuta só em <code>127.0.0.1</code>. Se você escuta fora dele sem TLS nem proxy, um aviso aparece no log.</td></tr>
     <tr><td>Senhas</td><td>BCrypt; troca obrigatória no primeiro acesso quando a senha inicial é gerada.</td></tr>
     <tr><td>Login</td><td>Bloqueio de 5 minutos após 5 falhas por usuário <em>e</em> origem, com limite total por usuário e expiração; um terceiro não consegue trancar o <code>admin</code>.</td></tr>
     <tr><td>Sessão</td><td>Cookie <code>HttpOnly</code> e <code>SameSite=Strict</code> (e <code>Secure</code> com <code>OMNIDUDE_COOKIE_SECURE=true</code>).</td></tr>
@@ -76,7 +76,7 @@
 <h2 id="lista-de-verificacao-para-producao">Lista de verificação para produção<a class="anchor" href="#lista-de-verificacao-para-producao" aria-label="Link para esta seção">#</a></h2>
 <ol class="steps">
   <li><strong>Instale pelo systemd</strong> (<code>packaging/install.sh</code>): usuário sem privilégios, dados privados e sistema de arquivos somente leitura (<a href="instalacao.html">Instalação</a>).</li>
-  <li><strong>Mantenha o bind em <code>127.0.0.1</code></strong> e publique por um proxy reverso com HTTPS na mesma máquina.</li>
+  <li><strong>Prefira manter o bind em <code>127.0.0.1</code></strong> e publicar por um proxy reverso com HTTPS na mesma máquina. Em rede interna confiável, escutar na rede por HTTP (<code>OMNIDUDE_BIND</code>) é aceitável, sabendo que a senha trafega sem criptografia; o TLS no próprio OmniDude é a alternativa sem proxy (<a href="instalacao.html#acessar-de-outras-maquinas-https">Instalação</a>).</li>
   <li><strong>Configure o proxy:</strong> <code>OMNIDUDE_FORWARD_HEADERS=native</code> e <code>OMNIDUDE_COOKIE_SECURE=true</code>; se o proxy for remoto, <code>OMNIDUDE_TRUSTED_PROXIES</code>. O proxy deve <em>substituir</em> <code>X-Forwarded-For</code> e <code>X-Forwarded-Proto</code>.</li>
   <li><strong>Defina</strong> <code>OMNIDUDE_ADMIN_PASSWORD</code> (e troque-a depois) ou troque logo a senha gerada.</li>
   <li><strong>Guarde a chave de criptografia</strong> à parte e copie os backups para fora da máquina.</li>

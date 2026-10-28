@@ -33,7 +33,7 @@ java -jar target/omnidude-0.1.0-SNAPSHOT.jar</code></pre>
   <thead><tr><th>Variável</th><th>Padrão</th><th>Função</th></tr></thead>
   <tbody>
     <tr><td><code>OMNIDUDE_DATA_DIR</code></td><td><code>./data</code></td><td>Onde ficam <code>omnidude.db</code> e <code>secret.key</code>. Faça backup dos dois.</td></tr>
-    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta. Para sair da máquina, use proxy com HTTPS.</td></tr>
+    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta. <code>127.0.0.1</code> só atende a própria máquina; <code>0.0.0.0</code> atende pela rede (veja <a href="#acessar-de-outras-maquinas-https">Acessar de outras máquinas</a>).</td></tr>
     <tr><td><code>OMNIDUDE_PORT</code></td><td><code>8080</code></td><td>Porta HTTP.</td></tr>
     <tr><td><code>OMNIDUDE_ADMIN_PASSWORD</code></td><td>aleatória</td><td>Senha inicial do <code>admin</code>.</td></tr>
     <tr><td><code>OMNIDUDE_SECRET_KEY</code></td><td>arquivo</td><td>Chave AES-256 em base64. Sem ela, é gerada em <code>secret.key</code>.</td></tr>
@@ -76,8 +76,88 @@ sudo ./packaging/uninstall.sh --purge</code></pre>
 <div class="note"><p><strong>Ping sob o isolamento.</strong> A unidade concede <code>CAP_NET_RAW</code> ao serviço. Se o ping ainda falhar, libere o ICMP sem <em>raw socket</em>: <code>echo 'net.ipv4.ping_group_range = 0 2147483647' | sudo tee /etc/sysctl.d/90-ping.conf &amp;&amp; sudo sysctl --system</code>. Para testar como o serviço enxerga: <code>sudo -u omnidude ping -c1 192.168.0.1</code>.</p></div>
 <div class="note"><p>A unidade e os scripts foram validados com <code>systemd-analyze verify</code> e por testes automatizados, mas a instalação como root em um servidor real ainda não foi exercitada. Faça um teste de fumaça: <code>systemctl status omnidude</code>, abra a interface, crie um dispositivo e confira o ping.</p></div>
 
-<h2>Acessar de outras máquinas (HTTPS)</h2>
-<p>Por padrão o OmniDude escuta só em <code>127.0.0.1</code>. Para usá-lo pela rede, mantenha esse padrão e ponha um <strong>proxy reverso com TLS</strong> (nginx, Caddy, Apache) na mesma máquina. Em <code>/etc/omnidude/omnidude.env</code>:</p>
+<h2 id="acessar-de-outras-maquinas-https">Acessar de outras máquinas</h2>
+<p>Por padrão o OmniDude escuta só em <code>127.0.0.1</code>: só a própria máquina o alcança. Para abri-lo pelo IP da máquina (por exemplo <code>http://192.168.1.10:8080</code>), há três caminhos, do mais simples ao mais indicado:</p>
+<table>
+  <thead><tr><th>Opção</th><th>Como</th><th>Indicada quando</th></tr></thead>
+  <tbody>
+    <tr><td><a href="#escutar-na-rede-http"><strong>A. Escutar na rede (HTTP)</strong></a></td><td>só <code>OMNIDUDE_BIND</code></td><td>Rede interna confiável, laboratório, primeiro teste.</td></tr>
+    <tr><td><a href="#tls-no-proprio-omnidude"><strong>B. TLS no próprio OmniDude</strong></a></td><td><code>OMNIDUDE_BIND</code> + certificado (<code>SERVER_SSL_*</code>)</td><td>Você quer HTTPS sem instalar outro programa.</td></tr>
+    <tr><td><a href="#proxy-reverso-recomendado"><strong>C. Proxy reverso com HTTPS</strong></a></td><td>nginx, Caddy ou Apache na frente</td><td>Acesso de várias pessoas, certificado de verdade, exposição além da rede interna. <strong>Recomendada.</strong></td></tr>
+  </tbody>
+</table>
+
+<h3 id="escutar-na-rede-http">Opção A: escutar na rede (HTTP)</h3>
+<p>Mude o endereço de escuta com <code>OMNIDUDE_BIND</code>:</p>
+<table>
+  <thead><tr><th>Valor</th><th>Efeito</th></tr></thead>
+  <tbody>
+    <tr><td><code>127.0.0.1</code> (padrão)</td><td>Só a própria máquina.</td></tr>
+    <tr><td><code>0.0.0.0</code></td><td>Todas as interfaces IPv4 da máquina: qualquer IP dela responde.</td></tr>
+    <tr><td>um IP, como <code>192.168.1.10</code></td><td>Só aquela interface. Útil numa máquina com mais de uma rede (por exemplo, atender só a rede de gerência).</td></tr>
+  </tbody>
+</table>
+<p><strong>Rodando o jar:</strong></p>
+<pre><code>OMNIDUDE_BIND=0.0.0.0 java -jar target/omnidude-0.1.0-SNAPSHOT.jar</code></pre>
+<p><strong>Com o serviço systemd:</strong> edite o arquivo de ambiente e reinicie.</p>
+<pre><code>sudo nano /etc/omnidude/omnidude.env      # descomente/ajuste: OMNIDUDE_BIND=0.0.0.0
+sudo systemctl restart omnidude
+journalctl -u omnidude -n 20              # confira o aviso de escuta (veja abaixo)</code></pre>
+<p>Depois, abra <code>http://IP-DA-MAQUINA:8080</code> em outro computador. Para descobrir o IP: <code>hostname -I</code>.</p>
+<ol class="steps">
+  <li><strong>Libere a porta no firewall</strong> da máquina, de preferência só para a sua rede:
+    <pre><code># Ubuntu/Debian (ufw)
+sudo ufw allow from 192.168.1.0/24 to any port 8080 proto tcp
+
+# RHEL/Fedora (firewalld)
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="192.168.1.0/24" port port="8080" protocol="tcp" accept'
+sudo firewall-cmd --reload</code></pre></li>
+  <li><strong>Entre normalmente</strong> com o usuário e a senha. O login funciona com o cookie padrão.</li>
+  <li><strong>Troque a senha provisória</strong> logo no primeiro acesso, sabendo que ela trafegou sem criptografia (veja abaixo).</li>
+</ol>
+<h4>O que muda e o que observar</h4>
+<ul>
+  <li><strong>Aviso no log.</strong> Ao escutar fora de <code>127.0.0.1</code> sem TLS nem proxy, o OmniDude registra: <em>“escuta em 0.0.0.0 sem TLS: senhas e a sessão trafegam em texto puro”</em>. É esperado nesta opção; serve para você não esquecer.</li>
+  <li><strong>Texto puro.</strong> A senha, o cookie de sessão e todos os dados passam sem criptografia. Quem estiver no mesmo segmento de rede pode capturá-los. Numa rede interna confiável costuma ser aceitável; em Wi-Fi compartilhado ou fora dela, não.</li>
+  <li><strong>Não ligue <code>OMNIDUDE_COOKIE_SECURE=true</code></strong> com acesso por HTTP: o navegador descarta o cookie e o login “não pega”. Essa variável é só para HTTPS.</li>
+  <li><strong>Porta abaixo de 1024.</strong> A unidade systemd não concede <code>CAP_NET_BIND_SERVICE</code>, então o serviço não consegue usar as portas 80 ou 443. Use uma porta alta (<code>OMNIDUDE_PORT=8080</code>) ou a opção C.</li>
+  <li><strong>Mapa público.</strong> O link gerado usa o endereço pelo qual você abriu o OmniDude. Aberto pelo IP da máquina, ele sai com esse IP e só funciona para quem alcança esse IP. A tela de publicação avisa quando o endereço é local.</li>
+  <li><strong>Descoberta, SNMP e checagens</strong> não dependem desse ajuste: elas são conexões <em>de saída</em> do servidor.</li>
+  <li>As proteções de login, CSRF e perfis continuam valendo. O que muda é só o tráfego estar sem criptografia.</li>
+</ul>
+
+<h3 id="tls-no-proprio-omnidude">Opção B: TLS no próprio OmniDude</h3>
+<p>O OmniDude pode servir HTTPS sozinho, com um certificado em formato PKCS12 (<code>.p12</code>). Não precisa de proxy.</p>
+<ol class="steps">
+  <li><strong>Gere ou obtenha o certificado.</strong> Para um teste, um autoassinado (o navegador vai avisar que não é confiável):
+    <pre><code>keytool -genkeypair -alias omnidude -keyalg RSA -keysize 2048 -storetype PKCS12 \
+        -keystore omnidude.p12 -storepass TROQUE-ESTA-SENHA -dname "CN=omnidude" -validity 365</code></pre>
+    Com um certificado de verdade (por exemplo, do Let's Encrypt), converta-o:
+    <pre><code>openssl pkcs12 -export -in fullchain.pem -inkey privkey.pem -name omnidude \
+        -out omnidude.p12 -passout pass:TROQUE-ESTA-SENHA</code></pre></li>
+  <li><strong>Guarde o arquivo onde o serviço o leia</strong> e proteja-o. No systemd:
+    <pre><code>sudo install -m 0640 -o root -g omnidude omnidude.p12 /etc/omnidude/omnidude.p12</code></pre></li>
+  <li><strong>Configure</strong> em <code>/etc/omnidude/omnidude.env</code> (modo 600) e reinicie:
+    <pre><code>OMNIDUDE_BIND=0.0.0.0
+OMNIDUDE_PORT=8443
+OMNIDUDE_COOKIE_SECURE=true
+SERVER_SSL_ENABLED=true
+SERVER_SSL_KEY_STORE=/etc/omnidude/omnidude.p12
+SERVER_SSL_KEY_STORE_PASSWORD=TROQUE-ESTA-SENHA
+SERVER_SSL_KEY_STORE_TYPE=PKCS12</code></pre></li>
+  <li><strong>Acesse</strong> <code>https://IP-DA-MAQUINA:8443</code> e libere a porta no firewall, como na opção A.</li>
+</ol>
+<p>Rodando o jar, as mesmas variáveis servem (ou use as propriedades <code>--server.ssl.enabled=true</code>, <code>--server.ssl.key-store=…</code>, <code>--server.ssl.key-store-password=…</code>).</p>
+<ul>
+  <li>Com TLS ligado, o cookie de sessão sai com <code>Secure</code> e o servidor envia <code>Strict-Transport-Security</code> (HSTS). O aviso de “sem TLS” some.</li>
+  <li><strong>Não</strong> use <code>OMNIDUDE_FORWARD_HEADERS</code> aqui: ele é só para proxy reverso.</li>
+  <li>Um certificado renovado só vale depois de <code>sudo systemctl restart omnidude</code>.</li>
+  <li>O certificado precisa ter o nome (ou IP) pelo qual você acessa; com um autoassinado, cada navegador pede para aceitar a exceção.</li>
+</ul>
+<div class="note"><p>Esta opção foi exercitada com um certificado autoassinado (acesso pelo IP da máquina, cookie <code>Secure</code> e HSTS conferidos). A renovação automática de certificados (por exemplo, com <code>certbot</code>) fica por sua conta; com um proxy (opção C) ela costuma ser mais simples.</p></div>
+
+<h3 id="proxy-reverso-recomendado">Opção C: proxy reverso com HTTPS (recomendada)</h3>
+<p>Mantenha o OmniDude em <code>127.0.0.1</code> e ponha um <strong>proxy reverso com TLS</strong> (nginx, Caddy, Apache) na mesma máquina. O proxy cuida do certificado e da renovação, pode servir outros sistemas na porta 443 e aplicar limites de requisição. Em <code>/etc/omnidude/omnidude.env</code>:</p>
 <pre><code>OMNIDUDE_FORWARD_HEADERS=native
 OMNIDUDE_COOKIE_SECURE=true</code></pre>
 <p>Exemplo para o nginx. O proxy deve <strong>substituir</strong> os cabeçalhos <code>X-Forwarded-*</code> e desligar o <em>buffering</em> do canal de eventos em tempo real (<code>/api/stream</code>):</p>
@@ -102,7 +182,7 @@ OMNIDUDE_COOKIE_SECURE=true</code></pre>
     }
 }</code></pre>
 <ul>
-  <li>Se o proxy estiver em <strong>outra</strong> máquina, defina <code>OMNIDUDE_TRUSTED_PROXIES</code> com o IP dele (expressão regular, por exemplo <code>10\.0\.0\.5</code>).</li>
+  <li>Se o proxy estiver em <strong>outra</strong> máquina, o OmniDude precisa escutar numa interface que ele alcance (opção A, <code>OMNIDUDE_BIND=IP</code>, com firewall só para o proxy) e <code>OMNIDUDE_TRUSTED_PROXIES</code> com o IP dele (expressão regular, por exemplo <code>10\.0\.0\.5</code>).</li>
   <li><strong>Não use</strong> <code>OMNIDUDE_FORWARD_HEADERS=framework</code>: ele confia em qualquer origem e permite falsificar o IP do cliente.</li>
 </ul>
 <p>Veja o <a href="seguranca.html">capítulo de segurança</a> para o restante das recomendações.</p>
