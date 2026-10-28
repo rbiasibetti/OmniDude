@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/index.html">Manual</a> ·
+  <a href="https://rbiasibetti.github.io/OmniDude/">Manual</a> ·
   <a href="#início-rápido">Início rápido</a> ·
   <a href="#funcionalidades">Funcionalidades</a> ·
   <a href="#configuração">Configuração</a> ·
@@ -53,15 +53,7 @@
 
 ## Manual ilustrado
 
-O [**manual completo**](docs/index.html) (17 páginas navegáveis, com busca, capturas de tela e diagramas) está em
-[`docs/`](docs/) e é publicado no **GitHub Pages**. Ele cobre da instalação à API, com um capítulo para cada área:
-mapa, checagens, SNMP e tráfego, descoberta, topologia, identidade com DHCP, notificações, mapa público, administração,
-segurança e solução de problemas.
-
-- **Publicar:** *Settings → Pages → Deploy from a branch → `main` / pasta `/docs`*. O manual não usa CDN nem fontes
-  externas e também abre direto do disco (`docs/index.html`).
-- **Editar:** as fontes ficam em [`manual/`](manual/) (um fragmento HTML por capítulo e um gerador em Python); veja
-  [`manual/README.md`](manual/README.md).
+<https://rbiasibetti.github.io/OmniDude/>
 
 ## Por que o OmniDude
 
