@@ -10,6 +10,7 @@
   <img alt="Spring Boot 3.5" src="https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F?logo=springboot&logoColor=white">
   <img alt="SQLite" src="https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white">
   <img alt="SNMP v1, v2c e v3" src="https://img.shields.io/badge/SNMP-v1%20%7C%20v2c%20%7C%20v3-0A7BBB">
+  <img alt="Licença MIT" src="https://img.shields.io/badge/licen%C3%A7a-MIT-blue">
   <img alt="Testes" src="https://img.shields.io/badge/testes-364%20passando-brightgreen">
 </p>
 
@@ -599,9 +600,10 @@ Contribuições são bem-vindas. Antes de abrir um *pull request*:
 
 ## Licença
 
-Este repositório ainda **não tem licença definida**: até que um arquivo `LICENSE` seja adicionado, todos os direitos
-ficam reservados a quem o mantém, e ninguém tem permissão de uso, cópia ou redistribuição. Se pretende publicá-lo como
-código aberto, escolha uma licença (por exemplo MIT ou Apache-2.0) e adicione o arquivo `LICENSE` antes de divulgar.
+O OmniDude é distribuído sob a **licença MIT**: veja o arquivo [`LICENSE`](LICENSE). Você pode usar, copiar, modificar e
+redistribuir, inclusive comercialmente, mantendo o aviso de copyright.
+
+As bibliotecas de terceiros mantêm as licenças próprias (veja [Créditos](#créditos)).
 
 ## Créditos
 
@@ -610,5 +612,7 @@ código aberto, escolha uma licença (por exemplo MIT ou Apache-2.0) e adicione 
 [Cytoscape.js](https://js.cytoscape.org/), [uPlot](https://github.com/leeoniya/uPlot),
 [Alpine.js](https://alpinejs.dev/) e [Tailwind CSS](https://tailwindcss.com/). As tabelas de fabricante por MAC vêm do
 [arp-scan](https://github.com/royhills/arp-scan) (`ieee-oui.txt` e `mac-vendor.txt`; origem e data em
-[`src/main/resources/oui/SOURCE.txt`](src/main/resources/oui/SOURCE.txt)); o arp-scan é distribuído sob GPLv2, então
-confira a compatibilidade com a licença que você escolher para este projeto. Inspirado no The Dude, da MikroTik.
+[`src/main/resources/oui/SOURCE.txt`](src/main/resources/oui/SOURCE.txt)); esses dois
+arquivos de dados **não** são cobertos pela licença MIT do projeto: o arp-scan é distribuído sob GPLv2, e o registro OUI é
+do IEEE. Se for redistribuir o OmniDude, confira se isso atende às suas exigências de licenciamento. Inspirado no The
+Dude, da MikroTik.
