@@ -1,0 +1,14 @@
+{
+  "name": "omnidude-frontend-tools",
+  "private": true,
+  "description": "Ferramentas de desenvolvimento: gera static/css/app.css e copia as libs para static/vendor. Os artefatos s\u00e3o commitados; o build Maven n\u00e3o depende de Node.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "alpinejs": "3.14.1",
+    "cytoscape": "3.30.2",
+    "tailwindcss": "3.4.14",
+    "uplot": "1.6.31"
+  }
+}

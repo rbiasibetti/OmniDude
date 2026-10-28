@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checagens e latência · Manual do OmniDude</title>
+<meta name="description" content="Os cinco tipos de checagem, como o estado muda (histerese), limites de latência, gráficos de disponibilidade e como evitar falsos alarmes.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a class="current" aria-current="page" href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Usando · capítulo 05</p><h1>Checagens e latência</h1><p class="lead">Os cinco tipos de checagem, como o estado muda (histerese), limites de latência, gráficos de disponibilidade e como evitar falsos alarmes.</p></header>
+<article class="prose">
+<h2 id="o-que-e-uma-checagem">O que é uma checagem<a class="anchor" href="#o-que-e-uma-checagem" aria-label="Link para esta seção">#</a></h2>
+<p>Uma <strong>checagem</strong> (ou <em>serviço</em>) é um teste que o OmniDude repete em intervalos regulares contra um dispositivo. O resultado de cada execução alimenta o estado do serviço, o gráfico de latência e os eventos. Todo dispositivo ganha um <strong>Ping</strong> ao ser criado; os demais serviços entram por <span class="ui">+ Serviço</span> no inspetor.</p>
+<figure class="figure wide"><a class="zoom" href="img/manual/inspetor-servidor.jpg" title="Clique para ampliar"><img src="img/manual/inspetor-servidor.jpg" alt="O inspetor de um servidor sem SNMP: só o Ping, que é a checagem âncora." loading="lazy"></a><figcaption>O inspetor de um servidor sem SNMP: só o Ping, que é a checagem âncora.</figcaption></figure>
+
+<h2 id="tipos-de-checagem">Tipos de checagem<a class="anchor" href="#tipos-de-checagem" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Tipo</th><th>O que testa</th><th>Parâmetros</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Ping (ICMP)</strong></td><td>Resposta ao <code>ping</code> do sistema operacional.</td><td>nenhum</td></tr>
+    <tr><td><strong>Porta TCP</strong></td><td>Se a conexão TCP na porta é aceita.</td><td>porta</td></tr>
+    <tr><td><strong>HTTP / HTTPS</strong></td><td>Se o serviço web responde (sem seguir redirecionamentos).</td><td>caminho, método (<code>GET</code> ou <code>HEAD</code>), status aceitos (padrão <code>200-399</code>), texto esperado (só com <code>GET</code>), verificar certificado TLS (HTTPS)</td></tr>
+    <tr><td><strong>DNS</strong></td><td>Se o dispositivo, como servidor DNS, responde <code>NOERROR</code> com registros.</td><td>nome a consultar, tipo de registro (padrão <code>A</code>)</td></tr>
+    <tr><td><strong>SNMP (sysUpTime)</strong></td><td>Se o agente SNMP responde, usando o perfil do dispositivo.</td><td>porta (padrão 161)</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>Só pode haver <strong>um Ping</strong> por dispositivo. A checagem HTTP envia o endereço do dispositivo como alvo: o cabeçalho <code>Host</code> não pode ser definido, então hosts virtuais por nome não são testáveis.</p></div>
+
+<h3 id="criar-um-servico">Criar um serviço<a class="anchor" href="#criar-um-servico" aria-label="Link para esta seção">#</a></h3>
+<ol class="steps">
+  <li>Abra o inspetor do dispositivo e clique em <span class="ui">+ Serviço</span>.</li>
+  <li>Escolha o tipo e a porta. Os padrões já vêm preenchidos (por exemplo, HTTP na 80, com timeout de 5 s).</li>
+  <li>Ajuste, se preciso, o intervalo, o timeout e os limites (veja abaixo) e clique em <span class="ui">Adicionar</span>.</li>
+</ol>
+<figure class="figure"><a class="zoom" href="img/manual/form-checagem.jpg" title="Clique para ampliar"><img src="img/manual/form-checagem.jpg" alt="O formulário de novo serviço: tipo, porta, intervalo, timeout, limite de latência e histerese." loading="lazy"></a><figcaption>O formulário de novo serviço: tipo, porta, intervalo, timeout, limite de latência e histerese.</figcaption></figure>
+
+<h2 id="intervalo-timeout-e-limites">Intervalo, timeout e limites<a class="anchor" href="#intervalo-timeout-e-limites" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Campo</th><th>Padrão</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td>Intervalo (s)</td><td>30</td><td>De quanto em quanto tempo testar.</td></tr>
+    <tr><td>Timeout (ms)</td><td>2000 (HTTP/HTTPS: 5000)</td><td>Quanto esperar pela resposta.</td></tr>
+    <tr><td>Lat. limite (ms)</td><td>(sem)</td><td>Resposta acima disso põe o serviço em <span class="att">ATENÇÃO</span>.</td></tr>
+    <tr><td>Falhas p/ DOWN</td><td>3</td><td>Falhas seguidas antes de declarar DOWN.</td></tr>
+    <tr><td>Sucessos p/ UP</td><td>1</td><td>Sucessos seguidos antes de voltar a UP.</td></tr>
+    <tr><td>Ativo</td><td>sim</td><td>Desmarque para suspender só este serviço.</td></tr>
+  </tbody>
+</table>
+<p>Os padrões de intervalo e timeout de uma checagem <em>nova</em> são ajustáveis em <em>Configurações → Ajustes e manutenção</em>; as checagens existentes não mudam.</p>
+
+<h2 id="como-o-estado-muda-histerese">Como o estado muda (histerese)<a class="anchor" href="#como-o-estado-muda-histerese" aria-label="Link para esta seção">#</a></h2>
+<p>Uma única perda de pacote não deve derrubar um dispositivo. Por isso o estado usa <strong>histerese</strong>: o serviço só vira DOWN após <em>N</em> falhas seguidas e só volta a UP após <em>M</em> sucessos seguidos.</p>
+<figure class="diagram"><svg role="img" aria-label="O estado de um serviço: N falhas seguidas para cair, M sucessos para voltar; respostas lentas põem em ATENÇÃO." viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-arrow"/></marker></defs>
+  <rect class="d-box up" x="40" y="80" width="170" height="80" rx="40"/><text class="d-t b c" x="125" y="115">UP</text><text class="d-t s c" x="125" y="135">respondendo</text>
+  <rect class="d-box down" x="690" y="80" width="170" height="80" rx="40"/><text class="d-t b c" x="775" y="115">DOWN</text><text class="d-t s c" x="775" y="135">fora do ar</text>
+  <rect class="d-box warn" x="365" y="170" width="170" height="64" rx="32"/><text class="d-t b c" x="450" y="198">ATENÇÃO</text><text class="d-t s c" x="450" y="216">responde, mas lento</text>
+  <path class="d-line" d="M210 105C350 55 550 55 690 105" marker-end="url(#a2)"/>
+  <text class="d-t c" x="450" y="52">N falhas seguidas (padrão 3)</text>
+  <path class="d-line" d="M690 135C550 185 550 185 560 160" opacity="0"/>
+  <path class="d-line" d="M690 140C560 130 340 130 210 140" marker-end="url(#a2)"/>
+  <text class="d-t c" x="450" y="124">M sucessos seguidos (padrão 1)</text>
+  <path class="d-line dash" d="M170 160C230 190 300 200 365 200" marker-end="url(#a2)"/>
+  <text class="d-t s c" x="258" y="222">resposta acima do limite de latência</text>
+  <path class="d-line dash" d="M535 200C600 200 640 190 690 150" marker-end="url(#a2)"/>
+</svg><figcaption>O estado de um serviço: N falhas seguidas para cair, M sucessos para voltar; respostas lentas põem em ATENÇÃO.</figcaption></figure>
+<ul>
+  <li>Cada execução bem-sucedida zera a contagem de falhas, e vice-versa.</li>
+  <li>Se o serviço responde mas acima do <em>limite de latência</em>, ele fica em <span class="att">ATENÇÃO</span>.</li>
+  <li>Com os padrões (30 s de intervalo e 3 falhas), uma queda é declarada em cerca de 90 segundos. Para detectar mais rápido, reduza o intervalo ou o número de falhas, ao custo de mais alarmes falsos.</li>
+</ul>
+
+<h3 id="a-checagem-ancora">A checagem âncora<a class="anchor" href="#a-checagem-ancora" aria-label="Link para esta seção">#</a></h3>
+<p>O estado do <em>dispositivo</em> vem da <strong>checagem âncora</strong>: o Ping; se não houver, o SNMP.</p>
+<table>
+  <thead><tr><th>Âncora</th><th>Outros serviços</th><th>Estado do dispositivo</th></tr></thead>
+  <tbody>
+    <tr><td>DOWN</td><td>qualquer</td><td><span class="bad">DOWN</span></td></tr>
+    <tr><td>UP</td><td>todos bem</td><td><span class="ok">UP</span></td></tr>
+    <tr><td>UP</td><td>algum DOWN ou lento</td><td><span class="att">ATENÇÃO</span></td></tr>
+    <tr><td>sem resultado</td><td>qualquer</td><td>DESCONHECIDO</td></tr>
+  </tbody>
+</table>
+<p><strong>Supressão de alertas:</strong> com o dispositivo DOWN, só a âncora continua sendo checada e as falhas dos outros serviços não geram eventos. Assim, uma queda de switch não vira dezenas de mensagens sobre os servidores atrás dele.</p>
+
+<h2 id="verificar-agora-e-editar">Verificar agora e editar<a class="anchor" href="#verificar-agora-e-editar" aria-label="Link para esta seção">#</a></h2>
+<p>Em cada serviço do inspetor:</p>
+<ul>
+  <li><span class="ui">Verificar agora</span> executa a checagem na hora e mostra o resultado, sem esperar o próximo ciclo.</li>
+  <li><span class="ui">Editar</span> muda os parâmetros (o tipo não muda).</li>
+  <li><span class="ui">Excluir</span> remove o serviço e o histórico dele.</li>
+</ul>
+
+<h2 id="grafico-de-latencia">Gráfico de latência<a class="anchor" href="#grafico-de-latencia" aria-label="Link para esta seção">#</a></h2>
+<p>Clique num serviço no inspetor para ver o gráfico dele. O seletor escolhe a janela: <strong>1 h, 6 h, 24 h, 7 d ou 30 d</strong>.</p>
+<ul>
+  <li>A linha azul é a <strong>média</strong> do intervalo; a tracejada, o <strong>máximo</strong>.</li>
+  <li>Barras vermelhas marcam intervalos com <strong>falhas</strong>; lacunas na linha são períodos sem nenhuma resposta.</li>
+  <li>Abaixo do seletor: <em>disponibilidade</em> (percentual de sucessos), média, máximo e o número de amostras.</li>
+  <li>Passe o mouse para ler os valores de cada ponto.</li>
+</ul>
+<p>Até 7 dias vêm das amostras brutas; 30 dias, do agregado horário (com até cerca de 1 hora de atraso). Veja <a href="administracao.html#retencao-de-dados">Retenção de dados</a>.</p>
+
+<h2 id="boas-praticas">Boas práticas<a class="anchor" href="#boas-praticas" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li><strong>Um Ping em tudo, outros serviços só no que importa.</strong> Cada serviço extra é uma sonda a mais por intervalo.</li>
+  <li><strong>Ajuste o limite de latência</strong> de enlaces WAN ou serviços sensíveis; assim a lentidão avisa antes da queda.</li>
+  <li><strong>Aumente as falhas para DOWN</strong> em enlaces instáveis (Wi-Fi, 4G) para evitar eventos “vai e volta”.</li>
+  <li><strong>Pause</strong> o dispositivo (e não apague) durante manutenções pontuais.</li>
+  <li><strong>HTTP com texto esperado</strong> detecta uma aplicação que responde 200, mas com a página de erro.</li>
+</ul>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="mapa.html"><small>Anterior</small>Mapa e dispositivos</a><a class="next" href="snmp-trafego.html"><small>Próximo</small>SNMP, interfaces e tráfego</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#o-que-e-uma-checagem">O que é uma checagem</a></li><li class="l2"><a href="#tipos-de-checagem">Tipos de checagem</a></li><li class="l3"><a href="#criar-um-servico">Criar um serviço</a></li><li class="l2"><a href="#intervalo-timeout-e-limites">Intervalo, timeout e limites</a></li><li class="l2"><a href="#como-o-estado-muda-histerese">Como o estado muda (histerese)</a></li><li class="l3"><a href="#a-checagem-ancora">A checagem âncora</a></li><li class="l2"><a href="#verificar-agora-e-editar">Verificar agora e editar</a></li><li class="l2"><a href="#grafico-de-latencia">Gráfico de latência</a></li><li class="l2"><a href="#boas-praticas">Boas práticas</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

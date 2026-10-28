@@ -1,0 +1,60 @@
+omnidude:
+  data-dir: ${OMNIDUDE_DATA_DIR:./data}
+  secret-key: ${OMNIDUDE_SECRET_KEY:}
+  bootstrap-admin-password: ${OMNIDUDE_ADMIN_PASSWORD:}
+  monitoring:
+    max-concurrent-checks: 200
+    scheduler-tick-ms: 1000
+    registry-refresh-s: 10
+    default-interval-s: 30
+    default-timeout-ms: 2000
+  retention:
+    raw-days: 7
+    hourly-days: 400
+  traffic:
+    enabled: true
+    interval-s: 60
+    max-concurrent: 32
+  discovery:
+    max-hosts: 4096
+    hard-max-hosts: 65536
+    concurrency: 128
+    rate-per-second: 200
+    icmp-timeout-ms: 1000
+    tcp-timeout-ms: 700
+    allow-public: false
+    default-ports: [22, 80, 443, 3389]
+    passive: true
+
+server:
+  address: ${OMNIDUDE_BIND:127.0.0.1}
+  port: ${OMNIDUDE_PORT:8080}
+  # Atrás de um proxy reverso com HTTPS: OMNIDUDE_FORWARD_HEADERS=native e OMNIDUDE_COOKIE_SECURE=true.
+  # "native" só aceita X-Forwarded-* de proxies confiáveis (abaixo); "framework" confiaria em qualquer cliente, e quem
+  # falsificasse o cabeçalho contornaria o bloqueio de login e o limite da página pública. Sem proxy, deixe "none".
+  forward-headers-strategy: ${OMNIDUDE_FORWARD_HEADERS:none}
+  tomcat:
+    remoteip:
+      internal-proxies: ${OMNIDUDE_TRUSTED_PROXIES:127\.0\.0\.1|0:0:0:0:0:0:0:1|::1}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: strict
+        secure: ${OMNIDUDE_COOKIE_SECURE:false}
+
+spring:
+  application:
+    name: omnidude
+  threads:
+    virtual:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+  flyway:
+    locations: classpath:db/migration
+  jackson:
+    default-property-inclusion: non_null

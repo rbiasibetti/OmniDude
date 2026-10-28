@@ -1,0 +1,61 @@
+---
+title: Introdução
+group: Começando
+desc: O que o OmniDude faz, como ele pensa a sua rede (dispositivos, checagens, enlaces, mapas e eventos) e o que esperar dele.
+---
+<h2>O que é o OmniDude</h2>
+<p>O OmniDude NMS é um sistema de monitoramento de rede (<em>Network Management System</em>) inspirado no The Dude. Você cadastra ou descobre os equipamentos, arrasta-os num mapa e vê, em tempo real, o que está verde ou vermelho. Por baixo do mapa, ele mede latência e disponibilidade, lê o tráfego das interfaces por SNMP e envia alertas.</p>
+<ul>
+  <li><strong>Um arquivo, um processo.</strong> Spring Boot com SQLite embutido: sem servidor de banco, sem fila, sem agentes nos equipamentos. Precisa só de Java 21.</li>
+  <li><strong>Interface web.</strong> Abre no navegador; as bibliotecas são servidas pelo próprio servidor, sem CDN.</li>
+  <li><strong>Seguro por padrão.</strong> Escuta só em <code>127.0.0.1</code>, cifra segredos com AES-256-GCM, protege contra CSRF e só varre redes privadas.</li>
+</ul>
+
+<h2>Conceitos</h2>
+<p>Cinco ideias bastam para entender toda a interface.</p>
+<div class="grid2">
+  <div><h4>Dispositivo</h4><p>Qualquer coisa que você quer acompanhar: roteador, switch, firewall, access point, servidor, estação, impressora, storage. Tem nome, IP, tipo e, opcionalmente, um perfil SNMP.</p></div>
+  <div><h4>Checagem (serviço)</h4><p>Um teste repetido: ping, porta TCP, HTTP/HTTPS, DNS ou SNMP. O estado do dispositivo nasce do resultado delas.</p></div>
+  <div><h4>Enlace</h4><p>A ligação entre dois dispositivos (cabo, Wi-Fi, VPN, Internet). Pode ser descoberto, sugerido ou desenhado por você.</p></div>
+  <div><h4>Mapa</h4><p>A vista dos dispositivos e enlaces com posições gravadas. Pode haver vários mapas, e um deles pode ser publicado só para leitura.</p></div>
+  <div><h4>Evento</h4><p>O registro de uma mudança: dispositivo ou serviço caiu e voltou, interface de enlace caiu, descoberta concluída.</p></div>
+  <div><h4>Perfil SNMP</h4><p>As credenciais SNMP (v1, v2c ou v3) reutilizáveis por vários equipamentos. Ficam cifradas no banco.</p></div>
+</div>
+
+<h2>Estados de um dispositivo</h2>
+<table>
+  <thead><tr><th>Estado</th><th>Quando acontece</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ok">UP</span></td><td>A checagem âncora responde e nenhum outro serviço está falhando nem lento.</td></tr>
+    <tr><td><span class="att">ATENÇÃO</span></td><td>O dispositivo responde, mas algum outro serviço está DOWN ou mais lento que o limite de latência configurado.</td></tr>
+    <tr><td><span class="bad">DOWN</span></td><td>A checagem âncora (ping; se não houver, SNMP) falhou o número de vezes configurado. Os alertas dos serviços dele ficam suprimidos.</td></tr>
+    <tr><td>DESCONHECIDO</td><td>Ainda não houve resultado, ou o dispositivo é um nó lógico/deduzido, sem checagens.</td></tr>
+  </tbody>
+</table>
+<p>No mapa, os estados aparecem como borda verde (UP), âmbar (ATENÇÃO), vermelha (DOWN) e cinza (desconhecido). Um dispositivo em manutenção aparece como <strong>PAUSADO</strong> e não é checado.</p>
+
+<h2>Como os dados entram</h2>
+{{svg:arquitetura|Visão geral: o navegador conversa com o servidor por REST e SSE; o servidor mede a rede, grava no SQLite e envia alertas.}}
+<p>Há três caminhos para colocar equipamentos no mapa, que você pode combinar:</p>
+<ol>
+  <li><strong>Descoberta</strong>: varre uma faixa de IPs e identifica o que responde (<a href="descoberta.html">capítulo 7</a>).</li>
+  <li><strong>Cadastro manual</strong>: <span class="ui">+ Dispositivo</span> no mapa (<a href="mapa.html">capítulo 4</a>).</li>
+  <li><strong>Leitura por SNMP</strong>: traz interfaces, MACs e vizinhos de equipamentos gerenciáveis (<a href="snmp-trafego.html">capítulo 6</a>).</li>
+</ol>
+
+<h2>Perfis de acesso</h2>
+<table>
+  <thead><tr><th>Perfil</th><th>Pode</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag admin">ADMIN</span></td><td>Tudo: cadastrar, editar, apagar, descobrir, publicar o mapa, gerenciar canais, usuários, ajustes e backups.</td></tr>
+    <tr><td><span class="tag viewer">VIEWER</span></td><td>Só consultar: mapa, inspetor, gráficos, lista de dispositivos, eventos e Dashboard. Não vê <em>Configurações</em>, e qualquer tentativa de alterar algo é recusada pelo servidor, não só escondida na tela.</td></tr>
+  </tbody>
+</table>
+
+<h2>O que ele não faz (ainda)</h2>
+<ul>
+  <li>Não instala agentes nem lê métricas de sistema operacional (CPU, disco) dos servidores; o foco é rede.</li>
+  <li>A descoberta é só IPv4.</li>
+  <li>As leituras SNMP foram validadas contra agentes simulados, não contra uma frota de equipamentos reais. Veja <a href="referencia.html#limitacoes-conhecidas">limitações conhecidas</a>.</li>
+</ul>
+<div class="warn"><p>Use o OmniDude apenas em redes próprias ou com autorização expressa. A descoberta envia pacotes a cada endereço da faixa.</p></div>

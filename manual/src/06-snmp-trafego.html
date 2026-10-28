@@ -1,0 +1,73 @@
+---
+title: SNMP, interfaces e tráfego
+group: Usando
+desc: Perfis SNMP v1, v2c e v3, leitura de interfaces, taxas de tráfego, utilização dos enlaces e gráficos de 1 hora a 90 dias.
+---
+<h2>Perfis SNMP</h2>
+<p>Um <strong>perfil SNMP</strong> guarda as credenciais para consultar um equipamento. Vários dispositivos podem compartilhar o mesmo perfil. Abra o gerenciador por <span class="ui">Perfis…</span> no formulário do dispositivo (ou, na descoberta, <em>Gerenciar perfis SNMP…</em>).</p>
+{{img:form-perfil-snmp.jpg|Novo perfil SNMPv3 com autenticação e criptografia.}}
+<table>
+  <thead><tr><th>Versão</th><th>Campos</th></tr></thead>
+  <tbody>
+    <tr><td>v1 / v2c</td><td>community</td></tr>
+    <tr><td>v3</td><td>usuário; nível (<code>noAuthNoPriv</code>, <code>authNoPriv</code>, <code>authPriv</code>); protocolo e senha de autenticação (SHA, SHA-256, SHA-512); protocolo e senha de criptografia (AES-128, AES-192, AES-256)</td></tr>
+  </tbody>
+</table>
+<p>Todos têm também <strong>porta</strong> (padrão 161), <strong>timeout</strong> e <strong>retentativas</strong>.</p>
+<ul>
+  <li>As senhas SNMPv3 têm no mínimo <strong>8 caracteres</strong> (exigência do RFC 3414).</li>
+  <li>A community e as senhas ficam <strong>cifradas</strong> no banco (AES-256-GCM) e <strong>nunca</strong> voltam pela API. Ao editar um perfil, deixar o campo em branco <em>mantém</em> o segredo atual.</li>
+  <li>Onde o equipamento suportar, prefira <strong>v3 com <code>authPriv</code></strong>: v1 e v2c enviam a community em texto claro.</li>
+</ul>
+<div class="warn"><p>Defina nos equipamentos uma conta SNMP <strong>somente leitura</strong>. O OmniDude só lê; nunca escreve em equipamentos.</p></div>
+
+<h2>Associar o perfil ao dispositivo</h2>
+<p>Escolha o perfil no campo <em>Perfil SNMP</em> do dispositivo (ou deixe a <a href="descoberta.html">descoberta</a> fazer isso: ela já guarda o perfil que funcionou em cada host). Depois, adicione a checagem <strong>SNMP (sysUpTime)</strong> se quiser monitorar a disponibilidade do agente.</p>
+
+<h2>Ler as interfaces</h2>
+<p>No inspetor de um equipamento com perfil, clique em <span class="ui">Ler via SNMP</span>. O OmniDude consulta o sistema (<code>sysName</code>, <code>sysDescr</code>, <code>sysObjectID</code>) e a tabela de interfaces, e mostra uma mensagem como “3 interface(s) lida(s), 0 nova(s)”. Isso também:</p>
+<ul>
+  <li>atualiza o <strong>MAC</strong> do equipamento e registra o de <strong>cada interface</strong> (exceto <em>loopback</em>), que alimentam a <a href="identidade.html">identidade</a>;</li>
+  <li>atualiza o tipo e o sistema, quando conseguir identificá-los.</li>
+</ul>
+<p>A lista mostra, por interface, o nome, a velocidade, o estado operacional (ponto verde = <em>up</em>, vazado = <em>down</em>) e as taxas de entrada (↓) e saída (↑).</p>
+
+<h2>Monitorar o tráfego</h2>
+<p>Marque <span class="ui">monitorar</span> na interface para coletar os contadores dela. Para limitar a carga, o OmniDude faz <strong>uma consulta SNMP por dispositivo e ciclo</strong> (não uma por interface) e calcula a taxa entre duas leituras consecutivas.</p>
+{{img:inspetor-trafego.jpg|O inspetor com as taxas por interface e o gráfico de tráfego de Gi0/1.|wide}}
+<div class="note"><p>A primeira taxa aparece na <strong>segunda leitura</strong> (por padrão, cerca de 1 minuto depois). Interfaces importadas pela descoberta já vêm marcadas.</p></div>
+
+<h3>Gráfico de tráfego</h3>
+<p><span class="ui">gráfico</span>, ao lado da interface, abre o gráfico Rx/Tx. As linhas cheias são a <strong>média</strong> do intervalo e as tracejadas, o <strong>pico</strong>: azul para entrada (↓) e âmbar para saída (↑). A janela vai de <strong>1 h a 90 d</strong>. O texto acima do gráfico traz a média e o pico de cada sentido.</p>
+<ul>
+  <li>De 1 h a 7 d, os dados vêm das amostras brutas; <strong>30 d e 90 d</strong>, do agregado horário (com até cerca de 1 hora de atraso).</li>
+  <li>O agregado é gerado de hora em hora e antes da limpeza diária.</li>
+</ul>
+
+<h3>Como a taxa é calculada</h3>
+<ul>
+  <li><strong>Contadores de 64 bits</strong> (<code>ifHCInOctets</code>/<code>ifHCOutOctets</code>) são preferidos; sem eles (equipamento antigo ou SNMPv1), cai nos de 32 bits.</li>
+  <li><strong>Reset:</strong> um contador de 64 bits que diminui indica reinício do equipamento e não gera taxa.</li>
+  <li><strong>Volta (<em>wrap</em>) em 32 bits:</strong> a queda é tratada como volta se a taxa couber na velocidade da interface. Intervalos em que o contador poderia ter dado mais de uma volta (um enlace de 1 Gb/s dá a volta em cerca de 34 s) ficam <em>sem taxa</em> em vez de errados.</li>
+  <li>Taxa acima da velocidade da interface é descartada.</li>
+</ul>
+<div class="tip"><p>Em enlaces rápidos, use equipamentos com contadores de 64 bits (<code>ifXTable</code>) para ter taxas confiáveis.</p></div>
+
+<h2>Utilização dos enlaces no mapa</h2>
+<p>Quando as duas pontas de um enlace estão ligadas a interfaces monitoradas, o enlace no mapa mostra o tráfego: a <strong>espessura</strong> e a <strong>cor</strong> seguem a utilização (o maior sentido sobre a menor velocidade entre as pontas).</p>
+<table>
+  <thead><tr><th>Utilização</th><th>Cor</th></tr></thead>
+  <tbody>
+    <tr><td>Abaixo de 50 %</td><td><span class="ok">verde</span></td></tr>
+    <tr><td>De 50 % a 80 %</td><td><span class="att">âmbar</span></td></tr>
+    <tr><td>80 % ou mais</td><td>laranja</td></tr>
+    <tr><td>Interface <code>down</code> ou ponta DOWN</td><td><span class="bad">vermelho pontilhado</span></td></tr>
+  </tbody>
+</table>
+<p>O percentual também aparece no rótulo, para não depender só da cor. Sem leitura recente, o enlace volta ao estilo neutro, nunca a “0 %”.</p>
+{{img:mapa-interface-down.jpg|A interface Gi0/2 do core-sw caiu: o enlace fica vermelho pontilhado e um evento é registrado.}}
+<h3>Eventos de enlace</h3>
+<p>Uma interface ligada a um enlace <strong>confirmado</strong> que cai ou volta gera um evento <em>Enlace caiu</em> ou <em>Enlace voltou</em>. Portas de acesso comuns (sem enlace no mapa) não geram evento, para não inundar a tela.</p>
+
+<h2>Vizinhos</h2>
+<p><span class="ui">Vizinhos</span>, no inspetor, lê só os anúncios LLDP/CDP/MNDP do equipamento e propõe enlaces. Para varrer tudo de uma vez, use <span class="ui">Detectar enlaces</span> (<a href="topologia.html">Topologia</a>).</p>

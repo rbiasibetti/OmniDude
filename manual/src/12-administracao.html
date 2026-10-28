@@ -1,0 +1,77 @@
+---
+title: Administração
+group: Administração
+desc: A tela de Configurações: modo de manutenção, ajustes em tempo de execução, retenção de dados, usuários e perfis, backup e restauração.
+---
+<p>A tela <em>Configurações</em> existe só para o perfil <span class="tag admin">ADMIN</span>. Para o <span class="tag viewer">VIEWER</span> ela não aparece, e as rotas correspondentes recusam qualquer acesso, mesmo de leitura. Há quatro abas: <strong>Notificações</strong> (<a href="eventos-notificacoes.html">capítulo 10</a>), <strong>Ajustes e manutenção</strong>, <strong>Usuários</strong> e <strong>Backup</strong>.</p>
+
+<h2>Ajustes e manutenção</h2>
+{{img:config-adjustments.jpg|Ajustes em tempo de execução: modo de manutenção, retenção, monitoramento e descoberta.|wide}}
+<h3 id="modo-de-manutencao">Modo de manutenção</h3>
+<p>Suspende <strong>todas as notificações</strong> enquanto você mexe na rede. Eventos e checagens seguem normais: só o envio para os canais é suspenso. <strong>Todos</strong> os usuários veem um aviso âmbar no topo da tela enquanto o modo está ligado.</p>
+{{img:manutencao.jpg|O aviso do modo de manutenção aparece no topo para todos os usuários.}}
+<ul>
+  <li>Ligue por <strong>30 min</strong>, <strong>1 h</strong>, <strong>4 h</strong> ou <strong>até eu desligar</strong>. O prazo expira sozinho.</li>
+  <li>O botão <span class="ui">Gerenciar</span>, no aviso, leva de volta a esta tela para desligar.</li>
+  <li>Para pausar um <em>único</em> dispositivo, use <span class="ui">Pausar monitoramento</span> no inspetor.</li>
+</ul>
+<h3 id="retencao-de-dados">Retenção de dados</h3>
+<table>
+  <thead><tr><th>Ajuste</th><th>Padrão</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td>Amostras brutas (dias)</td><td>7</td><td>Depois disso só fica o agregado horário.</td></tr>
+    <tr><td>Agregado horário (dias)</td><td>400</td><td>A série longa de latência e tráfego (gráficos de 30 e 90 dias).</td></tr>
+  </tbody>
+</table>
+<p>Antes de apagar as amostras brutas, o OmniDude gera o agregado horário, então você não perde a tendência. A limpeza roda uma vez por dia.</p>
+<h3>Os outros ajustes</h3>
+<table>
+  <thead><tr><th>Grupo</th><th>Ajuste</th><th>Padrão</th></tr></thead>
+  <tbody>
+    <tr><td>Monitoramento</td><td>Intervalo da coleta de tráfego (s), por dispositivo</td><td>60</td></tr>
+    <tr><td></td><td>Intervalo padrão de uma checagem nova (s)</td><td>30</td></tr>
+    <tr><td></td><td>Timeout padrão de uma checagem nova (ms)</td><td>2000</td></tr>
+    <tr><td>Descoberta</td><td>Faixa que pede confirmação (hosts)</td><td>4096</td></tr>
+    <tr><td></td><td>Hosts sondados ao mesmo tempo</td><td>128</td></tr>
+    <tr><td></td><td>Hosts iniciados por segundo</td><td>200</td></tr>
+    <tr><td>Notificações</td><td>Janela anti-repetição (s); 0 desliga</td><td>60</td></tr>
+    <tr><td>Identidade (DHCP)</td><td>Atualizar o IP sozinho quando o dispositivo muda de endereço</td><td>ligado</td></tr>
+    <tr><td></td><td>Ler o ARP dos roteadores a cada (min); 0 desliga</td><td>10</td></tr>
+    <tr><td>Backup</td><td>Backup diário automático</td><td>desligado</td></tr>
+    <tr><td></td><td>Hora do backup (0 a 23)</td><td>3</td></tr>
+    <tr><td></td><td>Backups a manter</td><td>7</td></tr>
+  </tbody>
+</table>
+<p>O valor da tela <strong>vence</strong> o do <code>application.yml</code> e das variáveis de ambiente; <em>restaurar padrão</em> volta ao valor de fábrica. Cada ajuste mostra o limite aceito, e valores fora dele são recusados. O que muda de imediato vale já no próximo ciclo; os ajustes marcados como “exige reinício” só valem depois dele.</p>
+
+<h2>Usuários</h2>
+{{img:config-users.jpg|A lista de usuários: perfil, estado e ações.}}
+<table>
+  <thead><tr><th>Ação</th><th>Como funciona</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">+ Usuário</span></td><td>Informe usuário, senha provisória (mínimo de 10 caracteres) e perfil. A pessoa troca a senha no primeiro acesso.</td></tr>
+    <tr><td>Mudar o perfil</td><td>ADMIN altera tudo; VIEWER só consulta.</td></tr>
+    <tr><td>Desativar / ativar</td><td>Um usuário desativado não entra. Preserva o registro.</td></tr>
+    <tr><td>Redefinir senha</td><td>Define uma nova senha provisória.</td></tr>
+    <tr><td>Apagar</td><td>Remove o usuário.</td></tr>
+  </tbody>
+</table>
+<div class="note"><p><strong>Salvaguardas.</strong> Ninguém muda o próprio perfil, se desativa nem se apaga, e o <strong>último administrador ativo</strong> é sempre preservado. Qualquer mudança que afete o acesso de uma pessoa <strong>derruba as sessões abertas</strong> dela.</p></div>
+{{img:form-usuario.jpg|O formulário de novo usuário.}}
+<h3>Visão do VIEWER</h3>
+<p>O perfil de consulta vê o mapa, os inspetores, os gráficos, a lista de dispositivos e os eventos, mas não vê as ações de alteração e não tem <em>Configurações</em>. O servidor recusa qualquer escrita, mesmo que alguém tente chamar a API direto.</p>
+{{img:viewer-mapa.jpg|A visão de um usuário VIEWER: o menu não tem Configurações e a barra do mapa não tem as ações de alteração.}}
+{{img:viewer-inspetor.jpg|A visão de um usuário VIEWER: o inspetor sem as ações de alteração.}}
+
+<h2>Backup e restauração</h2>
+{{img:config-backup.jpg|A aba Backup: backup sob demanda, lista de cópias e instruções de restauração.}}
+<p><span class="ui">Fazer backup agora</span> (ou o backup diário automático, ligado em <em>Ajustes</em>) usa <code>VACUUM INTO</code>: uma cópia consistente e compacta <strong>com o serviço no ar</strong>. O arquivo é aberto e conferido (<code>PRAGMA integrity_check</code>) antes de valer. Fica em <code>&lt;dados&gt;/backups/</code> (permissão 600), mantém os <em>N</em> mais recentes e dá para <strong>baixar</strong> e <strong>apagar</strong> pela tela.</p>
+<h3>Restaurar</h3>
+<ol class="steps">
+  <li><strong>Pare</strong> o OmniDude (<code>sudo systemctl stop omnidude</code>).</li>
+  <li><strong>Guarde</strong> o <code>omnidude.db</code> atual e apague <code>omnidude.db-wal</code> e <code>omnidude.db-shm</code>.</li>
+  <li><strong>Copie</strong> o backup para o diretório de dados com o nome <code>omnidude.db</code>.</li>
+  <li><strong>Inicie</strong> de novo, com a <strong>mesma chave</strong> (<code>secret.key</code> ou <code>OMNIDUDE_SECRET_KEY</code>).</li>
+</ol>
+<div class="danger"><p>A chave de criptografia <strong>não</strong> vai no backup. Sem ela, as credenciais SNMP e dos canais ficam ilegíveis. Guarde <code>secret.key</code> (ou o valor de <code>OMNIDUDE_SECRET_KEY</code>) em local separado e seguro.</p></div>
+<p>Os backups ficam na mesma máquina do banco: <strong>copie-os para fora</strong> (outro servidor, armazenamento remoto) se quiser sobreviver à perda do disco.</p>

@@ -1,0 +1,92 @@
+---
+title: Checagens e latência
+group: Usando
+desc: Os cinco tipos de checagem, como o estado muda (histerese), limites de latência, gráficos de disponibilidade e como evitar falsos alarmes.
+---
+<h2>O que é uma checagem</h2>
+<p>Uma <strong>checagem</strong> (ou <em>serviço</em>) é um teste que o OmniDude repete em intervalos regulares contra um dispositivo. O resultado de cada execução alimenta o estado do serviço, o gráfico de latência e os eventos. Todo dispositivo ganha um <strong>Ping</strong> ao ser criado; os demais serviços entram por <span class="ui">+ Serviço</span> no inspetor.</p>
+{{img:inspetor-servidor.jpg|O inspetor de um servidor sem SNMP: só o Ping, que é a checagem âncora.|wide}}
+
+<h2>Tipos de checagem</h2>
+<table>
+  <thead><tr><th>Tipo</th><th>O que testa</th><th>Parâmetros</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Ping (ICMP)</strong></td><td>Resposta ao <code>ping</code> do sistema operacional.</td><td>nenhum</td></tr>
+    <tr><td><strong>Porta TCP</strong></td><td>Se a conexão TCP na porta é aceita.</td><td>porta</td></tr>
+    <tr><td><strong>HTTP / HTTPS</strong></td><td>Se o serviço web responde (sem seguir redirecionamentos).</td><td>caminho, método (<code>GET</code> ou <code>HEAD</code>), status aceitos (padrão <code>200-399</code>), texto esperado (só com <code>GET</code>), verificar certificado TLS (HTTPS)</td></tr>
+    <tr><td><strong>DNS</strong></td><td>Se o dispositivo, como servidor DNS, responde <code>NOERROR</code> com registros.</td><td>nome a consultar, tipo de registro (padrão <code>A</code>)</td></tr>
+    <tr><td><strong>SNMP (sysUpTime)</strong></td><td>Se o agente SNMP responde, usando o perfil do dispositivo.</td><td>porta (padrão 161)</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>Só pode haver <strong>um Ping</strong> por dispositivo. A checagem HTTP envia o endereço do dispositivo como alvo: o cabeçalho <code>Host</code> não pode ser definido, então hosts virtuais por nome não são testáveis.</p></div>
+
+<h3>Criar um serviço</h3>
+<ol class="steps">
+  <li>Abra o inspetor do dispositivo e clique em <span class="ui">+ Serviço</span>.</li>
+  <li>Escolha o tipo e a porta. Os padrões já vêm preenchidos (por exemplo, HTTP na 80, com timeout de 5 s).</li>
+  <li>Ajuste, se preciso, o intervalo, o timeout e os limites (veja abaixo) e clique em <span class="ui">Adicionar</span>.</li>
+</ol>
+{{img:form-checagem.jpg|O formulário de novo serviço: tipo, porta, intervalo, timeout, limite de latência e histerese.}}
+
+<h2>Intervalo, timeout e limites</h2>
+<table>
+  <thead><tr><th>Campo</th><th>Padrão</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td>Intervalo (s)</td><td>30</td><td>De quanto em quanto tempo testar.</td></tr>
+    <tr><td>Timeout (ms)</td><td>2000 (HTTP/HTTPS: 5000)</td><td>Quanto esperar pela resposta.</td></tr>
+    <tr><td>Lat. limite (ms)</td><td>(sem)</td><td>Resposta acima disso põe o serviço em <span class="att">ATENÇÃO</span>.</td></tr>
+    <tr><td>Falhas p/ DOWN</td><td>3</td><td>Falhas seguidas antes de declarar DOWN.</td></tr>
+    <tr><td>Sucessos p/ UP</td><td>1</td><td>Sucessos seguidos antes de voltar a UP.</td></tr>
+    <tr><td>Ativo</td><td>sim</td><td>Desmarque para suspender só este serviço.</td></tr>
+  </tbody>
+</table>
+<p>Os padrões de intervalo e timeout de uma checagem <em>nova</em> são ajustáveis em <em>Configurações → Ajustes e manutenção</em>; as checagens existentes não mudam.</p>
+
+<h2>Como o estado muda (histerese)</h2>
+<p>Uma única perda de pacote não deve derrubar um dispositivo. Por isso o estado usa <strong>histerese</strong>: o serviço só vira DOWN após <em>N</em> falhas seguidas e só volta a UP após <em>M</em> sucessos seguidos.</p>
+{{svg:histerese|O estado de um serviço: N falhas seguidas para cair, M sucessos para voltar; respostas lentas põem em ATENÇÃO.}}
+<ul>
+  <li>Cada execução bem-sucedida zera a contagem de falhas, e vice-versa.</li>
+  <li>Se o serviço responde mas acima do <em>limite de latência</em>, ele fica em <span class="att">ATENÇÃO</span>.</li>
+  <li>Com os padrões (30 s de intervalo e 3 falhas), uma queda é declarada em cerca de 90 segundos. Para detectar mais rápido, reduza o intervalo ou o número de falhas, ao custo de mais alarmes falsos.</li>
+</ul>
+
+<h3>A checagem âncora</h3>
+<p>O estado do <em>dispositivo</em> vem da <strong>checagem âncora</strong>: o Ping; se não houver, o SNMP.</p>
+<table>
+  <thead><tr><th>Âncora</th><th>Outros serviços</th><th>Estado do dispositivo</th></tr></thead>
+  <tbody>
+    <tr><td>DOWN</td><td>qualquer</td><td><span class="bad">DOWN</span></td></tr>
+    <tr><td>UP</td><td>todos bem</td><td><span class="ok">UP</span></td></tr>
+    <tr><td>UP</td><td>algum DOWN ou lento</td><td><span class="att">ATENÇÃO</span></td></tr>
+    <tr><td>sem resultado</td><td>qualquer</td><td>DESCONHECIDO</td></tr>
+  </tbody>
+</table>
+<p><strong>Supressão de alertas:</strong> com o dispositivo DOWN, só a âncora continua sendo checada e as falhas dos outros serviços não geram eventos. Assim, uma queda de switch não vira dezenas de mensagens sobre os servidores atrás dele.</p>
+
+<h2>Verificar agora e editar</h2>
+<p>Em cada serviço do inspetor:</p>
+<ul>
+  <li><span class="ui">Verificar agora</span> executa a checagem na hora e mostra o resultado, sem esperar o próximo ciclo.</li>
+  <li><span class="ui">Editar</span> muda os parâmetros (o tipo não muda).</li>
+  <li><span class="ui">Excluir</span> remove o serviço e o histórico dele.</li>
+</ul>
+
+<h2>Gráfico de latência</h2>
+<p>Clique num serviço no inspetor para ver o gráfico dele. O seletor escolhe a janela: <strong>1 h, 6 h, 24 h, 7 d ou 30 d</strong>.</p>
+<ul>
+  <li>A linha azul é a <strong>média</strong> do intervalo; a tracejada, o <strong>máximo</strong>.</li>
+  <li>Barras vermelhas marcam intervalos com <strong>falhas</strong>; lacunas na linha são períodos sem nenhuma resposta.</li>
+  <li>Abaixo do seletor: <em>disponibilidade</em> (percentual de sucessos), média, máximo e o número de amostras.</li>
+  <li>Passe o mouse para ler os valores de cada ponto.</li>
+</ul>
+<p>Até 7 dias vêm das amostras brutas; 30 dias, do agregado horário (com até cerca de 1 hora de atraso). Veja <a href="administracao.html#retencao-de-dados">Retenção de dados</a>.</p>
+
+<h2>Boas práticas</h2>
+<ul>
+  <li><strong>Um Ping em tudo, outros serviços só no que importa.</strong> Cada serviço extra é uma sonda a mais por intervalo.</li>
+  <li><strong>Ajuste o limite de latência</strong> de enlaces WAN ou serviços sensíveis; assim a lentidão avisa antes da queda.</li>
+  <li><strong>Aumente as falhas para DOWN</strong> em enlaces instáveis (Wi-Fi, 4G) para evitar eventos “vai e volta”.</li>
+  <li><strong>Pause</strong> o dispositivo (e não apague) durante manutenções pontuais.</li>
+  <li><strong>HTTP com texto esperado</strong> detecta uma aplicação que responde 200, mas com a página de erro.</li>
+</ul>

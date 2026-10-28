@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identidade estável com DHCP · Manual do OmniDude</title>
+<meta name="description" content="Como o OmniDude continua reconhecendo um equipamento quando o DHCP muda o IP dele, e como ajudá-lo (MACs, reservas, avisos de conflito).">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a class="current" aria-current="page" href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Usando · capítulo 09</p><h1>Identidade estável com DHCP</h1><p class="lead">Como o OmniDude continua reconhecendo um equipamento quando o DHCP muda o IP dele, e como ajudá-lo (MACs, reservas, avisos de conflito).</p></header>
+<article class="prose">
+<h2 id="o-problema">O problema<a class="anchor" href="#o-problema" aria-label="Link para esta seção">#</a></h2>
+<p>Numa rede com DHCP, o IP de um notebook, de uma câmera ou de um ponto de acesso pode mudar. Se o IP fosse a identidade, a troca apareceria como uma queda e um host “novo”, e o histórico seria perdido.</p>
+<p>No OmniDude o IP é só um atributo que muda. A <strong>identidade</strong> vem dos <strong>MACs conhecidos</strong> de cada dispositivo. Se o dispositivo cai e o MAC dele aparece em outro IP, o OmniDude atualiza o endereço e <em>tudo continua</em>: checagens, enlaces, posição no mapa e gráficos.</p>
+<figure class="diagram"><svg role="img" aria-label="Um dispositivo muda de IP: o OmniDude vê o MAC dele no ARP em outro endereço e atualiza o IP." viewBox="0 0 900 270" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-arrow"/></marker></defs>
+  <line class="d-line" x1="40" y1="60" x2="860" y2="60"/>
+  <g class="d-t s c"><text x="110" y="46">hoje, 09:00</text><text x="330" y="46">09:40</text><text x="560" y="46">09:41</text><text x="790" y="46">09:41</text></g>
+  <circle cx="110" cy="60" r="8" fill="var(--up)"/><circle cx="330" cy="60" r="8" fill="var(--down)"/><circle cx="560" cy="60" r="8" fill="var(--accent)"/><circle cx="790" cy="60" r="8" fill="var(--up)"/>
+  <rect class="d-box up" x="30" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="110" y="116">pc-ana · UP</text><text class="d-t s c" x="110" y="138">IP 192.168.1.50</text><text class="d-t s c" x="110" y="156">MAC 02:aa:…:30</text><text class="d-t s c" x="110" y="178">tudo funciona</text>
+  <rect class="d-box down" x="250" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="330" y="116">pc-ana · DOWN</text><text class="d-t s c" x="330" y="138">o DHCP deu outro IP;</text><text class="d-t s c" x="330" y="156">o ping ao .50 falha</text>
+  <rect class="d-box hl" x="480" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="560" y="116">ARP do servidor</text><text class="d-t s c" x="560" y="138">vê o MAC :30 em</text><text class="d-t s c" x="560" y="156">192.168.1.87</text><text class="d-t s c" x="560" y="178">(ninguém usa o .87)</text>
+  <rect class="d-box up" x="710" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="790" y="116">pc-ana · UP</text><text class="d-t s c" x="790" y="138">IP atualizado para</text><text class="d-t s c" x="790" y="156">192.168.1.87, com</text><text class="d-t s c" x="790" y="178">evento e histórico</text>
+  <path class="d-line" d="M190 145H248" marker-end="url(#a4)"/><path class="d-line" d="M410 145H478" marker-end="url(#a4)"/><path class="d-line" d="M640 145H708" marker-end="url(#a4)"/>
+  <text class="d-t s c" x="450" y="240">Mapa, enlaces, checagens e gráficos continuam os mesmos: só o IP mudou.</text>
+</svg><figcaption>Um dispositivo muda de IP: o OmniDude vê o MAC dele no ARP em outro endereço e atualiza o IP.</figcaption></figure>
+
+<h2 id="de-onde-vem-os-macs">De onde vêm os MACs<a class="anchor" href="#de-onde-vem-os-macs" aria-label="Link para esta seção">#</a></h2>
+<p>Eles são aprendidos sozinhos:</p>
+<ul>
+  <li>do <strong>cadastro</strong> e da <strong>descoberta</strong>;</li>
+  <li>do <strong>ARP</strong> enquanto o dispositivo responde;</li>
+  <li>de <strong>todas as interfaces</strong>, nos equipamentos SNMP (<span class="ui">Ler via SNMP</span>).</li>
+</ul>
+<p>No inspetor, a seção <strong>Identidade</strong> mostra os MACs (com o fabricante e a origem) e os IPs anteriores. Dá para <strong>adicionar</strong> outro à mão (a placa Wi-Fi de um notebook, por exemplo) e <strong>remover</strong>. Um MAC pertence a um dispositivo só.</p>
+<figure class="figure wide"><a class="zoom" href="img/manual/inspetor-switch.jpg" title="Clique para ampliar"><img src="img/manual/inspetor-switch.jpg" alt="A seção Identidade do inspetor lista os MACs do core-sw com fabricante e origem." loading="lazy"></a><figcaption>A seção Identidade do inspetor lista os MACs do core-sw com fabricante e origem.</figcaption></figure>
+
+<h2 id="o-que-acontece-a-cada-minuto">O que acontece a cada minuto<a class="anchor" href="#o-que-acontece-a-cada-minuto" aria-label="Link para esta seção">#</a></h2>
+<p>O OmniDude compara o ARP do servidor (e, a cada 10 minutos, o dos roteadores e firewalls SNMP) com o inventário:</p>
+<table>
+  <thead><tr><th>Situação</th><th>Resultado</th></tr></thead>
+  <tbody>
+    <tr><td>Dispositivo <span class="bad">DOWN</span>, e o MAC dele aparece em <strong>outro IP que ninguém usa</strong></td><td>O IP é <strong>atualizado sozinho</strong>, com histórico, e um evento informa. Checagens, enlaces, posição e gráficos continuam os mesmos.</td></tr>
+    <tr><td>O MAC responde nos <strong>dois</strong> IPs</td><td>O novo vira <strong>endereço adicional</strong> (equipamento com duas interfaces).</td></tr>
+    <tr><td>Dispositivo ainda <span class="ok">UP</span> no IP antigo</td><td>Nada: espera (o ARP antigo pode só estar velho).</td></tr>
+    <tr><td>O IP de um dispositivo é visto com <strong>outro MAC</strong></td><td><strong>Aviso</strong> (uma vez): outra máquina pode ter assumido o endereço, e o dispositivo pode estar “UP” por engano. Se você trocou a placa, adicione o MAC novo no inspetor.</td></tr>
+    <tr><td>MAC <strong>aleatório</strong> (celular com endereço privado), de VM, ou de mais de um dispositivo</td><td><strong>Nunca</strong> decide sozinho.</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>A atualização automática só acontece com o dispositivo DOWN. Em <em>Ajustes → Identidade (DHCP)</em> você pode desligá-la (o sistema passa a só avisar) e mudar o intervalo de leitura do ARP dos roteadores.</p></div>
+
+<h2 id="achar-um-ip-que-ninguem-contatou">Achar um IP que ninguém contatou<a class="anchor" href="#achar-um-ip-que-ninguem-contatou" aria-label="Link para esta seção">#</a></h2>
+<p>A tabela ARP só tem hosts com quem o servidor falou recentemente. Quando há dispositivos DOWN com MAC estável, o OmniDude faz o kernel <em>resolver</em> o ARP da sub-rede deles: envia um byte UDP para a porta 9 de cada endereço, sem privilégio e sem esperar resposta. Isso acontece no máximo a cada 5 minutos por sub-rede, e só para sub-redes em que o servidor tem interface, privadas e de até 1.024 endereços.</p>
+<p><span class="ui">Procurar novo IP</span> (inspetor de um dispositivo DOWN) faz essa busca na hora.</p>
+
+<h2 id="na-descoberta">Na descoberta<a class="anchor" href="#na-descoberta" aria-label="Link para esta seção">#</a></h2>
+<p>Um host que tem o MAC (ou, como sugestão, o nome) de um dispositivo cadastrado com outro IP aparece como “Parece ser <em>X</em> (cadastrado com <em>Y</em>)”, com o botão <span class="ui">Atualizar IP</span>. Importá-lo como novo exige marcar essa opção de propósito. Veja <a href="descoberta.html#hosts-que-parecem-ja-cadastrados">Descoberta</a>.</p>
+
+<h2 id="limites-e-recomendacoes">Limites e recomendações<a class="anchor" href="#limites-e-recomendacoes" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li><strong>Sem ARP não há identidade nova.</strong> Dispositivos atrás de um roteador sem SNMP, em outra rede, não são reconhecidos.</li>
+  <li>Celulares com MAC aleatório só entram por <em>sugestão de nome</em>.</li>
+  <li>A melhor fonte seria o servidor DHCP (concessões e reservas), que o OmniDude ainda não lê.</li>
+</ul>
+<div class="tip"><p>Para o que importa (servidores, switches, impressoras, câmeras), <strong>reserve o IP no DHCP</strong>. A identificação por MAC é a rede de segurança, não um substituto para reservas.</p></div>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="topologia.html"><small>Anterior</small>Topologia e enlaces</a><a class="next" href="eventos-notificacoes.html"><small>Próximo</small>Eventos e notificações</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#o-problema">O problema</a></li><li class="l2"><a href="#de-onde-vem-os-macs">De onde vêm os MACs</a></li><li class="l2"><a href="#o-que-acontece-a-cada-minuto">O que acontece a cada minuto</a></li><li class="l2"><a href="#achar-um-ip-que-ninguem-contatou">Achar um IP que ninguém contatou</a></li><li class="l2"><a href="#na-descoberta">Na descoberta</a></li><li class="l2"><a href="#limites-e-recomendacoes">Limites e recomendações</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

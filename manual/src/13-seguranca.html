@@ -1,0 +1,57 @@
+---
+title: Segurança
+group: Administração
+desc: O que o OmniDude faz por padrão, como publicá-lo com segurança, os riscos aceitos e como relatar uma vulnerabilidade.
+---
+<p>Este capítulo resume a revisão de segurança da versão atual. O relatório completo, com a lista de achados, está no arquivo <code>SEGURANCA.md</code> do repositório.</p>
+
+<h2>Padrões seguros</h2>
+<table>
+  <thead><tr><th>Área</th><th>O que é feito</th></tr></thead>
+  <tbody>
+    <tr><td>Rede</td><td>Escuta só em <code>127.0.0.1</code>. Um aviso aparece no log se você expõe sem TLS nem proxy.</td></tr>
+    <tr><td>Senhas</td><td>BCrypt; troca obrigatória no primeiro acesso quando a senha inicial é gerada.</td></tr>
+    <tr><td>Login</td><td>Bloqueio de 5 minutos após 5 falhas por usuário <em>e</em> origem, com limite total por usuário e expiração; um terceiro não consegue trancar o <code>admin</code>.</td></tr>
+    <tr><td>Sessão</td><td>Cookie <code>HttpOnly</code> e <code>SameSite=Strict</code> (e <code>Secure</code> com <code>OMNIDUDE_COOKIE_SECURE=true</code>).</td></tr>
+    <tr><td>CSRF</td><td>Token em cookie (<code>XSRF-TOKEN</code>), enviado em <code>X-XSRF-TOKEN</code> em toda escrita.</td></tr>
+    <tr><td>Autorização</td><td>ADMIN e VIEWER aplicados no <em>servidor</em>. Um teste varre todas as rotas a cada build.</td></tr>
+    <tr><td>Segredos</td><td>Credenciais SNMP, SMTP e tokens cifrados com AES-256-GCM; nunca voltam pela API nem aparecem em logs.</td></tr>
+    <tr><td>Arquivos</td><td>Diretório de dados 700; banco, chave e backups 600, reaplicados a cada início.</td></tr>
+    <tr><td>Cabeçalhos</td><td>CSP restritiva, <code>Referrer-Policy: no-referrer</code>, <code>Permissions-Policy</code>, <code>X-Frame-Options: DENY</code>, HSTS em HTTPS.</td></tr>
+    <tr><td>Varredura</td><td>Exige confirmação explícita, recusa redes públicas e limita taxa, concorrência e tamanho.</td></tr>
+    <tr><td>Tempo real</td><td>No máximo 500 conexões SSE simultâneas.</td></tr>
+  </tbody>
+</table>
+
+<h2>Lista de verificação para produção</h2>
+<ol class="steps">
+  <li><strong>Instale pelo systemd</strong> (<code>packaging/install.sh</code>): usuário sem privilégios, dados privados e sistema de arquivos somente leitura (<a href="instalacao.html">Instalação</a>).</li>
+  <li><strong>Mantenha o bind em <code>127.0.0.1</code></strong> e publique por um proxy reverso com HTTPS na mesma máquina.</li>
+  <li><strong>Configure o proxy:</strong> <code>OMNIDUDE_FORWARD_HEADERS=native</code> e <code>OMNIDUDE_COOKIE_SECURE=true</code>; se o proxy for remoto, <code>OMNIDUDE_TRUSTED_PROXIES</code>. O proxy deve <em>substituir</em> <code>X-Forwarded-For</code> e <code>X-Forwarded-Proto</code>.</li>
+  <li><strong>Defina</strong> <code>OMNIDUDE_ADMIN_PASSWORD</code> (e troque-a depois) ou troque logo a senha gerada.</li>
+  <li><strong>Guarde a chave de criptografia</strong> à parte e copie os backups para fora da máquina.</li>
+  <li><strong>Use SNMPv3 <code>authPriv</code></strong> e contas <em>somente leitura</em> nos equipamentos.</li>
+  <li><strong>Dê o perfil ADMIN</strong> só a quem precisa; use VIEWER para o resto.</li>
+  <li><strong>Atualize</strong> o OmniDude e as dependências a cada release.</li>
+</ol>
+<div class="warn"><p><strong>Nunca</strong> use <code>OMNIDUDE_FORWARD_HEADERS=framework</code> nem exponha a porta 8080 diretamente à Internet. A interface inteira (inclusive a API) exige login, mas o HTTP puro trafega senhas e cookies sem proteção.</p></div>
+
+<h2>Riscos aceitos</h2>
+<p>Pontos conhecidos que foram avaliados e mantidos, com a mitigação recomendada:</p>
+<table>
+  <thead><tr><th>Risco</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td>A CSP precisa de <code>'unsafe-eval'</code>: a versão padrão do Alpine.js avalia expressões com <code>new Function</code></td><td>Não há conteúdo de terceiros nem <code>innerHTML</code> com dados do usuário.</td></tr>
+    <tr><td>Quem é ADMIN pode apontar webhook, Telegram, checagem HTTP ou SMTP para qualquer destino (SSRF por administrador)</td><td>Dê ADMIN só a pessoas de confiança; restrinja a saída por firewall, se necessário.</td></tr>
+    <tr><td>As regras do <code>fingerprints.yml</code> são expressões regulares escritas pelo administrador (ReDoS)</td><td>Arquivo em <code>/var/lib/omnidude</code>, modo 600.</td></tr>
+    <tr><td>Bloqueio de login e limite de taxa ficam na memória e zeram ao reiniciar</td><td>Limite de requisições no proxy, se exposto à Internet.</td></tr>
+    <tr><td>O link do mapa público é uma credencial ao portador (sem senha nem expiração)</td><td><span class="ui">Gerar novo link</span> ou <span class="ui">Despublicar</span> ao suspeitar de vazamento.</td></tr>
+    <tr><td>A senha inicial gerada aparece uma vez no log</td><td>Troca obrigatória no primeiro login; ou defina <code>OMNIDUDE_ADMIN_PASSWORD</code> no arquivo de ambiente (modo 600).</td></tr>
+    <tr><td>SNMP v1 e v2c enviam a community em texto claro</td><td>Use SNMPv3 <code>authPriv</code> sempre que possível.</td></tr>
+  </tbody>
+</table>
+<h3>O que não foi coberto</h3>
+<p>Teste de intrusão externo, <em>fuzzing</em> dos protocolos (SNMP, CDP, MNDP) e validação contra equipamentos reais. A interface (JavaScript) não tem testes automatizados.</p>
+
+<h2>Relatar uma vulnerabilidade</h2>
+<p><strong>Não abra uma issue pública.</strong> Use o relato privado de vulnerabilidades do GitHub: na página do repositório, aba <em>Security</em> → <em>Report a vulnerability</em>. Descreva o que foi encontrado, o impacto e como reproduzir (versão, configuração, uma requisição de exemplo). Ações que exigem o papel ADMIN já concedido (por exemplo, apontar um webhook para um endereço interno) estão fora do escopo; veja <code>SECURITY.md</code>.</p>

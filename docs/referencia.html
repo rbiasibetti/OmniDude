@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Referência e glossário · Manual do OmniDude</title>
+<meta name="description" content="Variáveis de ambiente, propriedades, arquivos do diretório de dados, portas, limitações conhecidas, roteiro e glossário.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a class="current" aria-current="page" href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Referência · capítulo 16</p><h1>Referência e glossário</h1><p class="lead">Variáveis de ambiente, propriedades, arquivos do diretório de dados, portas, limitações conhecidas, roteiro e glossário.</p></header>
+<article class="prose">
+<h2 id="variaveis-de-ambiente">Variáveis de ambiente<a class="anchor" href="#variaveis-de-ambiente" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Variável</th><th>Padrão</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td><code>OMNIDUDE_DATA_DIR</code></td><td><code>./data</code></td><td>Onde ficam <code>omnidude.db</code> e <code>secret.key</code>. Faça backup dos dois.</td></tr>
+    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta. Para expor na rede, use TLS ou um proxy reverso.</td></tr>
+    <tr><td><code>OMNIDUDE_PORT</code></td><td><code>8080</code></td><td>Porta HTTP.</td></tr>
+    <tr><td><code>OMNIDUDE_SECRET_KEY</code></td><td>(arquivo)</td><td>Chave AES-256 em base64 (32 bytes), por exemplo <code>openssl rand -base64 32</code>. Sem ela, é gerada em <code>secret.key</code>.</td></tr>
+    <tr><td><code>OMNIDUDE_ADMIN_PASSWORD</code></td><td>(aleatória)</td><td>Senha inicial do <code>admin</code>; dispensa a troca obrigatória.</td></tr>
+    <tr><td><code>OMNIDUDE_FORWARD_HEADERS</code></td><td><code>none</code></td><td>Atrás de proxy reverso, use <code>native</code> (confia em <code>X-Forwarded-*</code> só dos proxies abaixo). Evite <code>framework</code>.</td></tr>
+    <tr><td><code>OMNIDUDE_TRUSTED_PROXIES</code></td><td>só a própria máquina</td><td>Expressão regular dos IPs de proxy confiáveis.</td></tr>
+    <tr><td><code>OMNIDUDE_COOKIE_SECURE</code></td><td><code>false</code></td><td><code>true</code> atrás de HTTPS: o cookie de sessão só trafega por TLS.</td></tr>
+    <tr><td><code>JAVA_OPTS</code> (systemd)</td><td><code>-Xms128m -Xmx512m -XX:+ExitOnOutOfMemoryError</code></td><td>Opções da JVM no serviço.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="propriedades">Propriedades<a class="anchor" href="#propriedades" aria-label="Link para esta seção">#</a></h2>
+<p>Qualquer propriedade pode ser passada na linha de comando (<code>java -jar omnidude.jar --omnidude.traffic.interval-s=30</code>) ou num <code>application.yml</code> ao lado do jar. Alguns valores também se editam <em>em tempo de execução</em> (<a href="administracao.html">Administração</a>): o valor da tela vence o desta tabela.</p>
+<table>
+  <thead><tr><th>Propriedade</th><th>Padrão</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td><code>omnidude.monitoring.max-concurrent-checks</code></td><td>200</td><td>Checagens simultâneas.</td></tr>
+    <tr><td><code>omnidude.monitoring.default-interval-s</code> / <code>default-timeout-ms</code></td><td>30 / 2000</td><td>Valores de uma checagem nova.</td></tr>
+    <tr><td><code>omnidude.traffic.enabled</code></td><td>true</td><td>Liga a coleta de tráfego.</td></tr>
+    <tr><td><code>omnidude.traffic.interval-s</code></td><td>60</td><td>Intervalo da coleta de contadores por dispositivo.</td></tr>
+    <tr><td><code>omnidude.traffic.max-concurrent</code></td><td>32</td><td>Dispositivos consultados ao mesmo tempo.</td></tr>
+    <tr><td><code>omnidude.retention.raw-days</code></td><td>7</td><td>Dias de amostras brutas.</td></tr>
+    <tr><td><code>omnidude.retention.hourly-days</code></td><td>400</td><td>Dias de agregado horário.</td></tr>
+    <tr><td><code>omnidude.discovery.max-hosts</code></td><td>4096</td><td>Acima disso a varredura pede confirmação.</td></tr>
+    <tr><td><code>omnidude.discovery.hard-max-hosts</code></td><td>65536</td><td>Teto absoluto.</td></tr>
+    <tr><td><code>omnidude.discovery.concurrency</code> / <code>rate-per-second</code></td><td>128 / 200</td><td>Sondas simultâneas e hosts iniciados por segundo.</td></tr>
+    <tr><td><code>omnidude.discovery.allow-public</code></td><td>false</td><td>Permite varrer faixas públicas.</td></tr>
+    <tr><td><code>omnidude.discovery.default-ports</code></td><td>22, 80, 443, 3389</td><td>Portas TCP sondadas na varredura.</td></tr>
+    <tr><td><code>omnidude.discovery.passive</code></td><td>true</td><td>Consulta NetBIOS, SSDP/UPnP e mDNS em cada host encontrado.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="arquivos-do-diretorio-de-dados">Arquivos do diretório de dados<a class="anchor" href="#arquivos-do-diretorio-de-dados" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Arquivo</th><th>Para que serve</th></tr></thead>
+  <tbody>
+    <tr><td><code>omnidude.db</code> (e <code>-wal</code>, <code>-shm</code>)</td><td>O banco SQLite: dispositivos, checagens, histórico, usuários, canais.</td></tr>
+    <tr><td><code>secret.key</code></td><td>A chave AES-256 dos segredos (se não vier por <code>OMNIDUDE_SECRET_KEY</code>).</td></tr>
+    <tr><td><code>fingerprints.yml</code></td><td>Regras próprias de identificação (opcional).</td></tr>
+    <tr><td><code>mac-vendor.txt</code></td><td>Prefixos de fabricante próprios (opcional).</td></tr>
+    <tr><td><code>backups/</code></td><td>Cópias do banco.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="portas-e-protocolos">Portas e protocolos<a class="anchor" href="#portas-e-protocolos" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Direção</th><th>Porta</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Entrada</td><td>TCP 8080 (<code>OMNIDUDE_PORT</code>)</td><td>Interface web e API.</td></tr>
+    <tr><td>Saída</td><td>UDP 161 (ou a do perfil)</td><td>SNMP aos equipamentos.</td></tr>
+    <tr><td>Saída</td><td>ICMP; portas TCP das checagens</td><td>Ping, TCP, HTTP/HTTPS, DNS (UDP/TCP 53).</td></tr>
+    <tr><td>Saída</td><td>TCP 25/465/587</td><td>E-mail, conforme o canal.</td></tr>
+    <tr><td>Saída</td><td>TCP 443</td><td>Telegram (<code>api.telegram.org</code>) e webhooks HTTPS.</td></tr>
+    <tr><td>Saída (descoberta)</td><td>UDP 137, 1900, 5353</td><td>NetBIOS, SSDP e mDNS, em <em>unicast</em>, só nos hosts encontrados.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="limitacoes-conhecidas">Limitações conhecidas<a class="anchor" href="#limitacoes-conhecidas" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li><strong>SNMP só foi testado contra agentes simulados</strong>, não contra <code>net-snmp</code> nem equipamentos reais. A leitura do LLDP assume que <code>lldpRemLocalPortNum</code> é o <code>ifIndex</code> e depende de como cada fabricante preenche <code>lldpRemPortId</code>.</li>
+  <li><strong>Taxa em contadores de 32 bits</strong> perde precisão em enlaces rápidos (volta em cerca de 34 s a 1 Gb/s); a taxa é omitida quando o intervalo é ambíguo.</li>
+  <li><strong>ICMP</strong> validado só em Linux; macOS e Windows dependem do formato de saída do <code>ping</code> local.</li>
+  <li><strong>HTTPS:</strong> o caminho de sucesso contra um servidor TLS real não foi exercitado; o cabeçalho <code>Host</code> não pode ser definido.</li>
+  <li><strong>Descoberta</strong> só IPv4. O traceroute e o mDNS por multicast não foram implementados.</li>
+  <li><strong>Interface</strong> sem testes automatizados; a verificação foi manual, no navegador.</li>
+  <li><strong>Notificações:</strong> testadas contra servidores locais simulados, não contra a API real do Telegram nem um provedor SMTP.</li>
+  <li><strong>systemd:</strong> a instalação como root e o <code>ping</code> sob <code>CAP_NET_RAW</code> ainda não foram exercitados em servidor real.</li>
+  <li><strong>Pendentes:</strong> teste de carga (500 dispositivos), Dockerfile, spike de 10 minutos do SQLite e do mapa com 500 nós.</li>
+</ul>
+
+<h2 id="roteiro">Roteiro<a class="anchor" href="#roteiro" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Fase</th><th>Escopo</th><th>Estado</th></tr></thead>
+  <tbody>
+    <tr><td>0–1</td><td>Esqueleto, segurança, dispositivos, ICMP, histerese, mapa, eventos em tempo real</td><td class="ok">pronta</td></tr>
+    <tr><td>2</td><td>Checagens TCP/HTTP/DNS/SNMP, inspetor, gráfico de latência, Dashboard</td><td class="ok">pronta</td></tr>
+    <tr><td>3</td><td>Descoberta de rede, interfaces, LLDP, enlaces</td><td class="ok">pronta</td></tr>
+    <tr><td>3.5</td><td>Topologia por FDB, ARP, CDP e MNDP; nós deduzidos; descoberta por NetBIOS, SSDP e mDNS</td><td class="ok">pronta</td></tr>
+    <tr><td>4</td><td>Tráfego por interface, SNMPv3, agregação horária, utilização nos enlaces</td><td class="ok">pronta</td></tr>
+    <tr><td>5</td><td>Notificações, configurações, usuários, backup, modo de manutenção</td><td class="ok">pronta</td></tr>
+    <tr><td>6</td><td>Revisão de segurança, systemd e documentação de instalação</td><td class="ok">pronta</td></tr>
+    <tr><td>6</td><td>Teste de carga e Dockerfile</td><td class="att">pendente</td></tr>
+  </tbody>
+</table>
+
+<h2 id="glossario">Glossário<a class="anchor" href="#glossario" aria-label="Link para esta seção">#</a></h2>
+<dl class="gloss">
+  <dt>ARP</dt><dd>Tabela que liga endereços IP a endereços MAC na rede local. O OmniDude a lê do servidor e de roteadores SNMP.</dd>
+  <dt>Checagem âncora</dt><dd>O Ping (ou, sem ele, o SNMP): define se o dispositivo está UP ou DOWN.</dd>
+  <dt>CDP / LLDP / MNDP</dt><dd>Protocolos de anúncio de vizinhos: Cisco, padrão aberto e MikroTik.</dd>
+  <dt>CIDR</dt><dd>Notação de faixa de rede, como <code>192.168.1.0/24</code>.</dd>
+  <dt>CSRF</dt><dd>Ataque em que outro site faz o seu navegador agir como você; o OmniDude exige um token em toda escrita.</dd>
+  <dt>FDB</dt><dd>Tabela de encaminhamento de um switch: qual MAC está em qual porta.</dd>
+  <dt>Histerese</dt><dd>Exigir várias falhas (ou sucessos) seguidos antes de mudar o estado, para evitar oscilações.</dd>
+  <dt>MAC / OUI</dt><dd>Endereço físico da placa; os 3 primeiros bytes (OUI) identificam o fabricante.</dd>
+  <dt>Nó deduzido</dt><dd>Switch, hub ou AP sem SNMP que o OmniDude infere pelos MACs vistos numa porta.</dd>
+  <dt>Nó lógico</dt><dd>Dispositivo sem IP e sem checagens (Internet, nuvem, VPN, segmento), só para receber enlaces.</dd>
+  <dt>SNMP</dt><dd>Protocolo de gerenciamento de redes. v1 e v2c usam <em>community</em>; v3 tem usuário, autenticação e criptografia.</dd>
+  <dt>SSE</dt><dd><em>Server-Sent Events</em>: o canal pelo qual o servidor empurra atualizações ao navegador.</dd>
+  <dt>VIEWER / ADMIN</dt><dd>Perfis de acesso: só consulta, e altera tudo.</dd>
+  <dt>Wrap</dt><dd>Volta de um contador de 32 bits ao zero ao chegar ao máximo.</dd>
+</dl>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="problemas.html"><small>Anterior</small>Solução de problemas</a><span></span></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#variaveis-de-ambiente">Variáveis de ambiente</a></li><li class="l2"><a href="#propriedades">Propriedades</a></li><li class="l2"><a href="#arquivos-do-diretorio-de-dados">Arquivos do diretório de dados</a></li><li class="l2"><a href="#portas-e-protocolos">Portas e protocolos</a></li><li class="l2"><a href="#limitacoes-conhecidas">Limitações conhecidas</a></li><li class="l2"><a href="#roteiro">Roteiro</a></li><li class="l2"><a href="#glossario">Glossário</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

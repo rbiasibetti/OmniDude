@@ -1,0 +1,12 @@
+<svg viewBox="0 0 900 270" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-arrow"/></marker></defs>
+  <line class="d-line" x1="40" y1="60" x2="860" y2="60"/>
+  <g class="d-t s c"><text x="110" y="46">hoje, 09:00</text><text x="330" y="46">09:40</text><text x="560" y="46">09:41</text><text x="790" y="46">09:41</text></g>
+  <circle cx="110" cy="60" r="8" fill="var(--up)"/><circle cx="330" cy="60" r="8" fill="var(--down)"/><circle cx="560" cy="60" r="8" fill="var(--accent)"/><circle cx="790" cy="60" r="8" fill="var(--up)"/>
+  <rect class="d-box up" x="30" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="110" y="116">pc-ana · UP</text><text class="d-t s c" x="110" y="138">IP 192.168.1.50</text><text class="d-t s c" x="110" y="156">MAC 02:aa:…:30</text><text class="d-t s c" x="110" y="178">tudo funciona</text>
+  <rect class="d-box down" x="250" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="330" y="116">pc-ana · DOWN</text><text class="d-t s c" x="330" y="138">o DHCP deu outro IP;</text><text class="d-t s c" x="330" y="156">o ping ao .50 falha</text>
+  <rect class="d-box hl" x="480" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="560" y="116">ARP do servidor</text><text class="d-t s c" x="560" y="138">vê o MAC :30 em</text><text class="d-t s c" x="560" y="156">192.168.1.87</text><text class="d-t s c" x="560" y="178">(ninguém usa o .87)</text>
+  <rect class="d-box up" x="710" y="90" width="160" height="110" rx="10"/><text class="d-t b c" x="790" y="116">pc-ana · UP</text><text class="d-t s c" x="790" y="138">IP atualizado para</text><text class="d-t s c" x="790" y="156">192.168.1.87, com</text><text class="d-t s c" x="790" y="178">evento e histórico</text>
+  <path class="d-line" d="M190 145H248" marker-end="url(#a4)"/><path class="d-line" d="M410 145H478" marker-end="url(#a4)"/><path class="d-line" d="M640 145H708" marker-end="url(#a4)"/>
+  <text class="d-t s c" x="450" y="240">Mapa, enlaces, checagens e gráficos continuam os mesmos: só o IP mudou.</text>
+</svg>

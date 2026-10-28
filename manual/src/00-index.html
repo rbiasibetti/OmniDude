@@ -1,0 +1,60 @@
+---
+title: Início
+layout: home
+desc: Manual completo do OmniDude NMS, o monitor de rede com mapa interativo, descoberta automática e alertas.
+---
+<div class="hero">
+  <p class="eyebrow">Manual do usuário e do administrador</p>
+  <h1>Veja a sua rede <span>inteira</span> num mapa, e saiba quando algo muda.</h1>
+  <p class="lead">O OmniDude NMS descobre os equipamentos, desenha a topologia, monitora serviços e tráfego e avisa quando algo cai ou volta. Roda como um único arquivo <code>.jar</code>, sem agentes e sem banco de dados externo.</p>
+  <div class="cta">
+    <a class="btn" href="primeiros-passos.html">Começar agora</a>
+    <a class="btn ghost" href="instalacao.html">Instalar</a>
+    <a class="btn ghost" href="introducao.html">O que é o OmniDude</a>
+  </div>
+  {{img:mapa.jpg|O mapa de uma rede de laboratório: enlaces coloridos pela utilização, um dispositivo fora do ar e nós deduzidos para switches sem SNMP.|wide}}
+</div>
+
+<div class="home-body">
+<h2>Por onde começar</h2>
+<div class="cards">
+  <a class="card" href="instalacao.html"><span class="k">Começando</span><strong>Instalação</strong><span>Requisitos, execução do jar, serviço systemd e acesso por HTTPS.</span></a>
+  <a class="card" href="primeiros-passos.html"><span class="k">Começando</span><strong>Primeiros passos</strong><span>Login, tour pela interface e o caminho de zero a uma rede monitorada.</span></a>
+  <a class="card" href="descoberta.html"><span class="k">Usando</span><strong>Descoberta de rede</strong><span>Varra uma faixa de IPs e importe os equipamentos já identificados.</span></a>
+  <a class="card" href="mapa.html"><span class="k">Usando</span><strong>Mapa e dispositivos</strong><span>Posicione nós, crie enlaces manuais e use nós lógicos para Internet e nuvem.</span></a>
+  <a class="card" href="eventos-notificacoes.html"><span class="k">Usando</span><strong>Eventos e notificações</strong><span>E-mail, Telegram e webhook, com regras por gravidade.</span></a>
+  <a class="card" href="administracao.html"><span class="k">Administração</span><strong>Usuários, ajustes e backup</strong><span>Perfis, modo de manutenção, retenção e restauração.</span></a>
+</div>
+
+<h2>O manual em um mapa</h2>
+<div class="grid2">
+  <div><h4>Quem usa a rede no dia a dia</h4><p>Leia <a href="primeiros-passos.html">Primeiros passos</a>, <a href="mapa.html">Mapa e dispositivos</a>, <a href="checagens.html">Checagens e latência</a> e <a href="eventos-notificacoes.html">Eventos e notificações</a>.</p></div>
+  <div><h4>Quem administra o servidor</h4><p>Leia <a href="instalacao.html">Instalação</a>, <a href="administracao.html">Administração</a>, <a href="seguranca.html">Segurança</a> e <a href="referencia.html">Referência</a>.</p></div>
+  <div><h4>Quem monta a topologia</h4><p>Leia <a href="descoberta.html">Descoberta</a>, <a href="snmp-trafego.html">SNMP e tráfego</a>, <a href="topologia.html">Topologia</a> e <a href="identidade.html">Identidade e DHCP</a>.</p></div>
+  <div><h4>Quem integra com outros sistemas</h4><p>Leia <a href="api.html">API REST</a> e <a href="eventos-notificacoes.html#webhook">Webhook</a>.</p></div>
+</div>
+
+<h2>Todos os capítulos</h2>
+<ol>
+  <li><a href="introducao.html">Introdução</a>: conceitos e visão geral</li>
+  <li><a href="instalacao.html">Instalação</a>: jar, systemd, HTTPS</li>
+  <li><a href="primeiros-passos.html">Primeiros passos</a>: login e tour pela interface</li>
+  <li><a href="mapa.html">Mapa e dispositivos</a></li>
+  <li><a href="checagens.html">Checagens e latência</a></li>
+  <li><a href="snmp-trafego.html">SNMP, interfaces e tráfego</a></li>
+  <li><a href="descoberta.html">Descoberta de rede</a></li>
+  <li><a href="topologia.html">Topologia e enlaces</a></li>
+  <li><a href="identidade.html">Identidade estável com DHCP</a></li>
+  <li><a href="eventos-notificacoes.html">Eventos e notificações</a></li>
+  <li><a href="mapa-publico.html">Mapa público</a></li>
+  <li><a href="administracao.html">Administração</a></li>
+  <li><a href="seguranca.html">Segurança</a></li>
+  <li><a href="api.html">API REST</a></li>
+  <li><a href="problemas.html">Solução de problemas</a></li>
+  <li><a href="referencia.html">Referência e glossário</a></li>
+</ol>
+
+<div class="note">
+  <p>As capturas de tela deste manual vêm de uma rede de laboratório simulada (agentes SNMP falsos em <code>127.0.60.x</code>). Nomes, IPs e MACs são fictícios.</p>
+</div>
+</div>

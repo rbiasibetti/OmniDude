@@ -1,0 +1,112 @@
+---
+title: Mapa e dispositivos
+group: Usando
+desc: Cadastrar dispositivos, posicioná-los no mapa, entender cores e traços, criar enlaces manuais e usar nós lógicos para a Internet e a nuvem.
+---
+<h2>Ler o mapa</h2>
+<p>Cada quadrado é um dispositivo; cada linha, um enlace. O ícone mostra o tipo, a borda mostra o estado e o rótulo traz o nome e o estado por extenso (o estado nunca depende só da cor).</p>
+{{img:mapa.jpg|Um mapa com todos os estilos de nó: ativos, DOWN e deduzidos.|wide}}
+<table>
+  <thead><tr><th>Aparência do nó</th><th>Significa</th></tr></thead>
+  <tbody>
+    <tr><td>Borda <span class="ok">verde</span> · <code>✔ UP</code></td><td>O dispositivo responde e os serviços estão bem.</td></tr>
+    <tr><td>Borda <span class="att">âmbar</span> · <code>▲ ATENÇÃO</code></td><td>Responde, mas um serviço está DOWN ou lento.</td></tr>
+    <tr><td>Borda <span class="bad">vermelha dupla</span> · <code>✖ DOWN</code></td><td>Não responde à checagem âncora.</td></tr>
+    <tr><td>Borda cinza · <code>? DESCONHECIDO</code></td><td>Sem resultado ainda.</td></tr>
+    <tr><td>Nó semitransparente · <code>PAUSADO</code></td><td>Em manutenção: não é checado e não gera alertas.</td></tr>
+    <tr><td>Borda tracejada · nuvem <code>☁</code></td><td>Nó <em>lógico</em> (você criou) ou <em>deduzido</em> (o OmniDude inferiu um switch ou hub sem SNMP).</td></tr>
+    <tr><td><code>📌</code> antes do nome</td><td>Posição fixada: o <span class="ui">Organizar</span> não move.</td></tr>
+  </tbody>
+</table>
+
+<h3>Cores e traços dos enlaces</h3>
+<table>
+  <thead><tr><th>Aparência</th><th>Significa</th></tr></thead>
+  <tbody>
+    <tr><td>Linha cinza contínua</td><td>Enlace confirmado, sem leitura de tráfego.</td></tr>
+    <tr><td>Linha <span class="ok">verde</span>, <span class="att">âmbar</span>, laranja; mais grossa quanto mais cheia</td><td>Utilização: abaixo de 50 %, de 50 a 80 %, a partir de 80 %. O percentual também aparece no rótulo.</td></tr>
+    <tr><td>Linha <span class="bad">vermelha pontilhada</span></td><td>Uma ponta DOWN, ou interface com <code>ifOperStatus = down</code>.</td></tr>
+    <tr><td>Linha roxa tracejada</td><td>Enlace <strong>sugerido</strong> pela detecção: confirme ou descarte.</td></tr>
+    <tr><td>Linha cinza pontilhada fina</td><td>Enlace <strong>inferido</strong> por falta de dados (confiança baixa).</td></tr>
+    <tr><td>Verde-azulado traço-ponto · azul tracejado largo · verde-limão pontilhado</td><td>Tipos manuais: <strong>VPN</strong>, <strong>Internet/WAN</strong> e <strong>Wi-Fi</strong>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Mover e organizar</h2>
+<ul>
+  <li><strong>Arrastar</strong> um nó o move e <em>grava</em> a posição na hora.</li>
+  <li><span class="ui">Organizar</span> aplica um layout automático aos nós que não estão fixados.</li>
+  <li><span class="ui">Fixar posição</span> (inspetor) protege um nó do <span class="ui">Organizar</span>; <span class="ui">Soltar posição</span> desfaz.</li>
+  <li><span class="ui">⌂ Enquadrar</span> ajusta o zoom para mostrar tudo.</li>
+  <li>Use <span class="ui">+ Mapa</span> para criar outros mapas (por prédio, andar ou cliente) e o seletor <em>Mapa</em> para alternar. Um dispositivo pode estar em mais de um mapa.</li>
+</ul>
+
+<h2>Cadastrar um dispositivo</h2>
+<p><span class="ui">+ Dispositivo</span> abre o formulário. Todo dispositivo novo recebe automaticamente uma checagem de <strong>Ping</strong>.</p>
+{{img:form-dispositivo.jpg|O formulário de novo dispositivo.}}
+<table>
+  <thead><tr><th>Campo</th><th>Para que serve</th></tr></thead>
+  <tbody>
+    <tr><td>Nome</td><td>Como aparece no mapa e nas buscas.</td></tr>
+    <tr><td>Nó lógico</td><td>Sem IP e sem monitoramento; só para receber enlaces (veja <a href="#nos-logicos">abaixo</a>).</td></tr>
+    <tr><td>Endereço IP</td><td>Usado pelas checagens. Se o DHCP mudar o IP, o OmniDude pode atualizá-lo (<a href="identidade.html">Identidade e DHCP</a>).</td></tr>
+    <tr><td>Tipo</td><td>Roteador, switch, firewall, access point, servidor, estação, impressora, storage, nuvem, rede ou outro. Define o ícone.</td></tr>
+    <tr><td>Nome de host</td><td>Opcional; apenas informativo.</td></tr>
+    <tr><td>Perfil SNMP</td><td>As credenciais para ler o equipamento. <span class="ui">Perfis…</span> abre o gerenciador.</td></tr>
+    <tr><td>Notas</td><td>Texto livre: localização, responsável, contrato.</td></tr>
+  </tbody>
+</table>
+<p>Para <strong>editar</strong>, abra o inspetor e use <span class="ui">Editar dispositivo</span>. <span class="ui">Excluir</span> remove o dispositivo, as checagens, o histórico e os enlaces dele.</p>
+<div class="tip"><p>Quando importar vários equipamentos, prefira a <a href="descoberta.html">descoberta</a>: ela já traz o tipo, o fabricante, o MAC e o perfil SNMP que funcionou.</p></div>
+
+<h2>O inspetor</h2>
+<p>Clique num nó para abrir o inspetor, o painel da direita.</p>
+{{img:inspetor-switch.jpg|O inspetor de um switch SNMP: serviços, identidade, interfaces e latência.|wide}}
+<ul>
+  <li><strong>Cabeçalho:</strong> nome, estado e há quanto tempo está nele.</li>
+  <li><strong>Dados:</strong> IP, tipo, MAC (com o fabricante), nome de host e perfil SNMP.</li>
+  <li><strong>Serviços:</strong> as checagens, com <span class="ui">Verificar agora</span>, <span class="ui">Editar</span> e <span class="ui">Excluir</span> (<a href="checagens.html">capítulo 5</a>).</li>
+  <li><strong>Identidade:</strong> os MACs conhecidos (<a href="identidade.html">capítulo 9</a>).</li>
+  <li><strong>Interfaces:</strong> lidas por SNMP, com taxas e gráfico (<a href="snmp-trafego.html">capítulo 6</a>).</li>
+  <li><strong>Latência:</strong> o gráfico do serviço selecionado.</li>
+  <li><strong>Ações:</strong> <span class="ui">Editar dispositivo</span>, <span class="ui">Ligar a…</span>, <span class="ui">Fixar/Soltar posição</span>, <span class="ui">Pausar monitoramento</span> e <span class="ui">Excluir</span>.</li>
+</ul>
+<h3>Pausar o monitoramento</h3>
+<p><span class="ui">Pausar monitoramento</span> tira o dispositivo da checagem e dos alertas (aparece como <strong>PAUSADO</strong>), sem apagar nada. É o jeito certo de fazer manutenção em <em>um</em> equipamento. Para suspender as notificações de <em>tudo</em>, use o <a href="administracao.html#modo-de-manutencao">modo de manutenção</a>.</p>
+
+<h2>Enlaces manuais</h2>
+<p>A <a href="topologia.html">detecção automática</a> acha o que a rede anuncia, mas nada impede que você desenhe o resto: uma VPN, o link da operadora, um equipamento remoto.</p>
+<h3>Pelo mapa</h3>
+<ol class="steps">
+  <li>Clique em <span class="ui">+ Enlace</span>. O botão muda para “Escolha a origem…” e uma dica aparece no rodapé.</li>
+  <li>Clique no dispositivo de <strong>origem</strong> e depois no de <strong>destino</strong>.</li>
+  <li>No formulário, escolha as interfaces (opcional), o <strong>tipo</strong> e um rótulo, e clique em <span class="ui">Criar</span>.</li>
+</ol>
+{{img:mapa-modo-enlace.jpg|O modo de criação de enlace: a dica no rodapé orienta o próximo clique (Esc cancela).}}
+<h3>Por uma lista</h3>
+<p>No inspetor, <span class="ui">Ligar a…</span> abre o mesmo formulário com a origem preenchida, e você escolhe o destino numa lista, inclusive dispositivos que não estão visíveis no mapa.</p>
+{{img:form-enlace.jpg|O formulário de novo enlace: origem, destino, interfaces, tipo e rótulo.}}
+<table>
+  <thead><tr><th>Tipo</th><th>Uso</th></tr></thead>
+  <tbody>
+    <tr><td>Cabo</td><td>Ligação física comum.</td></tr>
+    <tr><td>Wi-Fi</td><td>Enlaces sem fio.</td></tr>
+    <tr><td>VPN</td><td>Túneis entre sites.</td></tr>
+    <tr><td>Internet / WAN</td><td>O link da operadora.</td></tr>
+    <tr><td>Outro</td><td>O que não se encaixa acima.</td></tr>
+  </tbody>
+</table>
+<p>Enlaces manuais nascem <strong>confirmados</strong> e a detecção automática nunca os altera. Para editar ou apagar, clique na linha do enlace.</p>
+
+<h2 id="nos-logicos">Nós lógicos: Internet, nuvem, VPN e redes</h2>
+<p>Há coisas no seu diagrama que não têm um endereço para monitorar: a Internet, a nuvem de um provedor, uma VPN, uma VLAN. Para elas, marque <strong>Nó lógico</strong> ao criar o dispositivo. O nó:</p>
+<ul>
+  <li>aparece no mapa como uma nuvem tracejada;</li>
+  <li>não tem IP, não tem checagens e não entra nas contagens;</li>
+  <li>serve só para receber enlaces (por exemplo, <em>Internet</em> ligada ao firewall de borda por um enlace do tipo Internet/WAN).</li>
+</ul>
+<p>Os tipos <strong>Nuvem</strong> e <strong>Rede</strong> existem para isso e também valem para dispositivos <em>com</em> IP, quando você quer monitorar um destino na nuvem ou numa sub-rede. A detecção automática não apaga nem liga nada a nós lógicos.</p>
+<div class="tip"><p><strong>Monitorar um destino externo.</strong> DNS público, o roteador de uma filial ou qualquer IP fora da sua rede são dispositivos comuns: cadastre com o IP, adicione as checagens (ICMP, DNS, TCP…) e ligue com um enlace manual.</p></div>
+
+<h2>Buscar e filtrar</h2>
+<p>A busca do topo aceita IP, nome, MAC ou fabricante. Os nós que não casam ficam esmaecidos e <kbd>Enter</kbd> centraliza o primeiro que casa. Para listas maiores, use a tela <em>Dispositivos</em>.</p>

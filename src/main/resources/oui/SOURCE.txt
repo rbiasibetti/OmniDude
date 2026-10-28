@@ -1,0 +1,13 @@
+Tabelas de fabricante por prefixo de MAC (OUI), do projeto arp-scan:
+
+  ieee-oui.txt    https://raw.githubusercontent.com/royhills/arp-scan/master/ieee-oui.txt
+                  Registro IEEE (MA-L 24 bits, MA-M 28 bits, MA-S 36 bits), gerado pelo get-oui do arp-scan
+                  em 2025-01-29.
+  mac-vendor.txt  https://raw.githubusercontent.com/royhills/arp-scan/master/mac-vendor.txt
+                  Entradas adicionais mantidas pelo arp-scan (VRRP, QEMU, MACs administrados localmente etc.).
+
+Formato: <prefixo hexadecimal><TAB><fabricante>, prefixo de 1 a 12 dígitos, com ou sem ':'. Vence o prefixo mais longo;
+no mesmo tamanho, mac-vendor.txt vence o ieee-oui.txt. Para acrescentar ou corrigir entradas sem recompilar, crie
+mac-vendor.txt no diretório de dados (OMNIDUDE_DATA_DIR): as linhas dele vencem as embutidas.
+
+Para atualizar: baixe os dois arquivos de novo para esta pasta.

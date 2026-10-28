@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administração · Manual do OmniDude</title>
+<meta name="description" content="A tela de Configurações: modo de manutenção, ajustes em tempo de execução, retenção de dados, usuários e perfis, backup e restauração.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a class="current" aria-current="page" href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Administração · capítulo 12</p><h1>Administração</h1><p class="lead">A tela de Configurações: modo de manutenção, ajustes em tempo de execução, retenção de dados, usuários e perfis, backup e restauração.</p></header>
+<article class="prose">
+<p>A tela <em>Configurações</em> existe só para o perfil <span class="tag admin">ADMIN</span>. Para o <span class="tag viewer">VIEWER</span> ela não aparece, e as rotas correspondentes recusam qualquer acesso, mesmo de leitura. Há quatro abas: <strong>Notificações</strong> (<a href="eventos-notificacoes.html">capítulo 10</a>), <strong>Ajustes e manutenção</strong>, <strong>Usuários</strong> e <strong>Backup</strong>.</p>
+
+<h2 id="ajustes-e-manutencao">Ajustes e manutenção<a class="anchor" href="#ajustes-e-manutencao" aria-label="Link para esta seção">#</a></h2>
+<figure class="figure wide"><a class="zoom" href="img/manual/config-adjustments.jpg" title="Clique para ampliar"><img src="img/manual/config-adjustments.jpg" alt="Ajustes em tempo de execução: modo de manutenção, retenção, monitoramento e descoberta." loading="lazy"></a><figcaption>Ajustes em tempo de execução: modo de manutenção, retenção, monitoramento e descoberta.</figcaption></figure>
+<h3 id="modo-de-manutencao">Modo de manutenção<a class="anchor" href="#modo-de-manutencao" aria-label="Link para esta seção">#</a></h3>
+<p>Suspende <strong>todas as notificações</strong> enquanto você mexe na rede. Eventos e checagens seguem normais: só o envio para os canais é suspenso. <strong>Todos</strong> os usuários veem um aviso âmbar no topo da tela enquanto o modo está ligado.</p>
+<figure class="figure"><a class="zoom" href="img/manual/manutencao.jpg" title="Clique para ampliar"><img src="img/manual/manutencao.jpg" alt="O aviso do modo de manutenção aparece no topo para todos os usuários." loading="lazy"></a><figcaption>O aviso do modo de manutenção aparece no topo para todos os usuários.</figcaption></figure>
+<ul>
+  <li>Ligue por <strong>30 min</strong>, <strong>1 h</strong>, <strong>4 h</strong> ou <strong>até eu desligar</strong>. O prazo expira sozinho.</li>
+  <li>O botão <span class="ui">Gerenciar</span>, no aviso, leva de volta a esta tela para desligar.</li>
+  <li>Para pausar um <em>único</em> dispositivo, use <span class="ui">Pausar monitoramento</span> no inspetor.</li>
+</ul>
+<h3 id="retencao-de-dados">Retenção de dados<a class="anchor" href="#retencao-de-dados" aria-label="Link para esta seção">#</a></h3>
+<table>
+  <thead><tr><th>Ajuste</th><th>Padrão</th><th>O que faz</th></tr></thead>
+  <tbody>
+    <tr><td>Amostras brutas (dias)</td><td>7</td><td>Depois disso só fica o agregado horário.</td></tr>
+    <tr><td>Agregado horário (dias)</td><td>400</td><td>A série longa de latência e tráfego (gráficos de 30 e 90 dias).</td></tr>
+  </tbody>
+</table>
+<p>Antes de apagar as amostras brutas, o OmniDude gera o agregado horário, então você não perde a tendência. A limpeza roda uma vez por dia.</p>
+<h3 id="os-outros-ajustes">Os outros ajustes<a class="anchor" href="#os-outros-ajustes" aria-label="Link para esta seção">#</a></h3>
+<table>
+  <thead><tr><th>Grupo</th><th>Ajuste</th><th>Padrão</th></tr></thead>
+  <tbody>
+    <tr><td>Monitoramento</td><td>Intervalo da coleta de tráfego (s), por dispositivo</td><td>60</td></tr>
+    <tr><td></td><td>Intervalo padrão de uma checagem nova (s)</td><td>30</td></tr>
+    <tr><td></td><td>Timeout padrão de uma checagem nova (ms)</td><td>2000</td></tr>
+    <tr><td>Descoberta</td><td>Faixa que pede confirmação (hosts)</td><td>4096</td></tr>
+    <tr><td></td><td>Hosts sondados ao mesmo tempo</td><td>128</td></tr>
+    <tr><td></td><td>Hosts iniciados por segundo</td><td>200</td></tr>
+    <tr><td>Notificações</td><td>Janela anti-repetição (s); 0 desliga</td><td>60</td></tr>
+    <tr><td>Identidade (DHCP)</td><td>Atualizar o IP sozinho quando o dispositivo muda de endereço</td><td>ligado</td></tr>
+    <tr><td></td><td>Ler o ARP dos roteadores a cada (min); 0 desliga</td><td>10</td></tr>
+    <tr><td>Backup</td><td>Backup diário automático</td><td>desligado</td></tr>
+    <tr><td></td><td>Hora do backup (0 a 23)</td><td>3</td></tr>
+    <tr><td></td><td>Backups a manter</td><td>7</td></tr>
+  </tbody>
+</table>
+<p>O valor da tela <strong>vence</strong> o do <code>application.yml</code> e das variáveis de ambiente; <em>restaurar padrão</em> volta ao valor de fábrica. Cada ajuste mostra o limite aceito, e valores fora dele são recusados. O que muda de imediato vale já no próximo ciclo; os ajustes marcados como “exige reinício” só valem depois dele.</p>
+
+<h2 id="usuarios">Usuários<a class="anchor" href="#usuarios" aria-label="Link para esta seção">#</a></h2>
+<figure class="figure"><a class="zoom" href="img/manual/config-users.jpg" title="Clique para ampliar"><img src="img/manual/config-users.jpg" alt="A lista de usuários: perfil, estado e ações." loading="lazy"></a><figcaption>A lista de usuários: perfil, estado e ações.</figcaption></figure>
+<table>
+  <thead><tr><th>Ação</th><th>Como funciona</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">+ Usuário</span></td><td>Informe usuário, senha provisória (mínimo de 10 caracteres) e perfil. A pessoa troca a senha no primeiro acesso.</td></tr>
+    <tr><td>Mudar o perfil</td><td>ADMIN altera tudo; VIEWER só consulta.</td></tr>
+    <tr><td>Desativar / ativar</td><td>Um usuário desativado não entra. Preserva o registro.</td></tr>
+    <tr><td>Redefinir senha</td><td>Define uma nova senha provisória.</td></tr>
+    <tr><td>Apagar</td><td>Remove o usuário.</td></tr>
+  </tbody>
+</table>
+<div class="note"><p><strong>Salvaguardas.</strong> Ninguém muda o próprio perfil, se desativa nem se apaga, e o <strong>último administrador ativo</strong> é sempre preservado. Qualquer mudança que afete o acesso de uma pessoa <strong>derruba as sessões abertas</strong> dela.</p></div>
+<figure class="figure"><a class="zoom" href="img/manual/form-usuario.jpg" title="Clique para ampliar"><img src="img/manual/form-usuario.jpg" alt="O formulário de novo usuário." loading="lazy"></a><figcaption>O formulário de novo usuário.</figcaption></figure>
+<h3 id="visao-do-viewer">Visão do VIEWER<a class="anchor" href="#visao-do-viewer" aria-label="Link para esta seção">#</a></h3>
+<p>O perfil de consulta vê o mapa, os inspetores, os gráficos, a lista de dispositivos e os eventos, mas não vê as ações de alteração e não tem <em>Configurações</em>. O servidor recusa qualquer escrita, mesmo que alguém tente chamar a API direto.</p>
+<figure class="figure"><a class="zoom" href="img/manual/viewer-mapa.jpg" title="Clique para ampliar"><img src="img/manual/viewer-mapa.jpg" alt="A visão de um usuário VIEWER: o menu não tem Configurações e a barra do mapa não tem as ações de alteração." loading="lazy"></a><figcaption>A visão de um usuário VIEWER: o menu não tem Configurações e a barra do mapa não tem as ações de alteração.</figcaption></figure>
+<figure class="figure"><a class="zoom" href="img/manual/viewer-inspetor.jpg" title="Clique para ampliar"><img src="img/manual/viewer-inspetor.jpg" alt="A visão de um usuário VIEWER: o inspetor sem as ações de alteração." loading="lazy"></a><figcaption>A visão de um usuário VIEWER: o inspetor sem as ações de alteração.</figcaption></figure>
+
+<h2 id="backup-e-restauracao">Backup e restauração<a class="anchor" href="#backup-e-restauracao" aria-label="Link para esta seção">#</a></h2>
+<figure class="figure"><a class="zoom" href="img/manual/config-backup.jpg" title="Clique para ampliar"><img src="img/manual/config-backup.jpg" alt="A aba Backup: backup sob demanda, lista de cópias e instruções de restauração." loading="lazy"></a><figcaption>A aba Backup: backup sob demanda, lista de cópias e instruções de restauração.</figcaption></figure>
+<p><span class="ui">Fazer backup agora</span> (ou o backup diário automático, ligado em <em>Ajustes</em>) usa <code>VACUUM INTO</code>: uma cópia consistente e compacta <strong>com o serviço no ar</strong>. O arquivo é aberto e conferido (<code>PRAGMA integrity_check</code>) antes de valer. Fica em <code>&lt;dados&gt;/backups/</code> (permissão 600), mantém os <em>N</em> mais recentes e dá para <strong>baixar</strong> e <strong>apagar</strong> pela tela.</p>
+<h3 id="restaurar">Restaurar<a class="anchor" href="#restaurar" aria-label="Link para esta seção">#</a></h3>
+<ol class="steps">
+  <li><strong>Pare</strong> o OmniDude (<code>sudo systemctl stop omnidude</code>).</li>
+  <li><strong>Guarde</strong> o <code>omnidude.db</code> atual e apague <code>omnidude.db-wal</code> e <code>omnidude.db-shm</code>.</li>
+  <li><strong>Copie</strong> o backup para o diretório de dados com o nome <code>omnidude.db</code>.</li>
+  <li><strong>Inicie</strong> de novo, com a <strong>mesma chave</strong> (<code>secret.key</code> ou <code>OMNIDUDE_SECRET_KEY</code>).</li>
+</ol>
+<div class="danger"><p>A chave de criptografia <strong>não</strong> vai no backup. Sem ela, as credenciais SNMP e dos canais ficam ilegíveis. Guarde <code>secret.key</code> (ou o valor de <code>OMNIDUDE_SECRET_KEY</code>) em local separado e seguro.</p></div>
+<p>Os backups ficam na mesma máquina do banco: <strong>copie-os para fora</strong> (outro servidor, armazenamento remoto) se quiser sobreviver à perda do disco.</p>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="mapa-publico.html"><small>Anterior</small>Mapa público</a><a class="next" href="seguranca.html"><small>Próximo</small>Segurança</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#ajustes-e-manutencao">Ajustes e manutenção</a></li><li class="l3"><a href="#modo-de-manutencao">Modo de manutenção</a></li><li class="l3"><a href="#retencao-de-dados">Retenção de dados</a></li><li class="l3"><a href="#os-outros-ajustes">Os outros ajustes</a></li><li class="l2"><a href="#usuarios">Usuários</a></li><li class="l3"><a href="#visao-do-viewer">Visão do VIEWER</a></li><li class="l2"><a href="#backup-e-restauracao">Backup e restauração</a></li><li class="l3"><a href="#restaurar">Restaurar</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

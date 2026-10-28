@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Mapa de rede</title>
+  <link rel="stylesheet" href="/css/public.css">
+</head>
+<body>
+  <header>
+    <h1 id="title">Mapa de rede</h1>
+    <div id="legend" class="legend" hidden>
+      <span class="dot up"></span> normal
+      <span class="dot warn"></span> atenção
+      <span class="dot down"></span> fora do ar
+      <span class="dot unknown"></span> sem informação
+    </div>
+    <span id="updated" class="updated"></span>
+  </header>
+  <main>
+    <div id="cy" role="img" aria-label="Mapa de rede"></div>
+    <p id="message" class="message" hidden></p>
+  </main>
+  <script src="/vendor/cytoscape.min.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/public.js"></script>
+</body>
+</html>

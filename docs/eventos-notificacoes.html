@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eventos e notificações · Manual do OmniDude</title>
+<meta name="description" content="O registro de eventos, a confirmação (ack) e o envio de alertas por e-mail, Telegram e webhook, com regras por gravidade, tipo e dispositivo.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a class="current" aria-current="page" href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Usando · capítulo 10</p><h1>Eventos e notificações</h1><p class="lead">O registro de eventos, a confirmação (ack) e o envio de alertas por e-mail, Telegram e webhook, com regras por gravidade, tipo e dispositivo.</p></header>
+<article class="prose">
+<h2 id="eventos">Eventos<a class="anchor" href="#eventos" aria-label="Link para esta seção">#</a></h2>
+<p>Um <strong>evento</strong> registra uma mudança de estado. A tela <em>Eventos</em> mostra os mais recentes; a faixa no rodapé do mapa mostra os últimos, e o contador vermelho ao lado do menu conta os ainda não confirmados.</p>
+<figure class="figure"><a class="zoom" href="img/manual/eventos.jpg" title="Clique para ampliar"><img src="img/manual/eventos.jpg" alt="A tela de eventos: filtro por gravidade e confirmação individual." loading="lazy"></a><figcaption>A tela de eventos: filtro por gravidade e confirmação individual.</figcaption></figure>
+<table>
+  <thead><tr><th>Tipo</th><th>Quando é gerado</th></tr></thead>
+  <tbody>
+    <tr><td>Dispositivo caiu / voltou</td><td>A checagem âncora mudou para DOWN ou voltou a UP.</td></tr>
+    <tr><td>Dispositivo com atenção</td><td>O dispositivo responde, mas um serviço falha ou está lento.</td></tr>
+    <tr><td>Serviço falhou / recuperado</td><td>Um serviço (que não é a âncora) mudou de estado.</td></tr>
+    <tr><td>Enlace caiu / voltou</td><td>Uma interface ligada a um enlace confirmado mudou de estado.</td></tr>
+    <tr><td>Limite ultrapassado</td><td>Reservado para limiares de métricas.</td></tr>
+    <tr><td>Descoberta</td><td>Uma varredura terminou.</td></tr>
+    <tr><td>Sistema</td><td>Avisos do próprio OmniDude, como a troca automática de IP por DHCP ou um conflito de identidade.</td></tr>
+  </tbody>
+</table>
+<p>Cada evento tem uma <strong>gravidade</strong>: <em>informativo</em>, <em>atenção</em> ou <em>crítico</em>.</p>
+<h3 id="confirmar-ack">Confirmar (ack)<a class="anchor" href="#confirmar-ack" aria-label="Link para esta seção">#</a></h3>
+<p><span class="ui">Confirmar</span> marca que alguém viu o evento. Com <em>só não confirmados</em> ligado, a lista mostra apenas o que ainda pede atenção, e o contador do menu diminui.</p>
+
+<h2 id="notificacoes">Notificações<a class="anchor" href="#notificacoes" aria-label="Link para esta seção">#</a></h2>
+<p>Em <em>Configurações → Notificações</em> <span class="tag admin">ADMIN</span>. Dois conceitos:</p>
+<div class="grid2">
+  <div><h4>Canal</h4><p>Diz <em>para onde</em> enviar: um webhook, um bot do Telegram ou um servidor SMTP.</p></div>
+  <div><h4>Regra</h4><p>Diz <em>o que</em> cada canal recebe: gravidade mínima, tipos de evento e dispositivo.</p></div>
+</div>
+<figure class="figure"><a class="zoom" href="img/manual/config-notifications.jpg" title="Clique para ampliar"><img src="img/manual/config-notifications.jpg" alt="Canais, regras e o histórico de envios." loading="lazy"></a><figcaption>Canais, regras e o histórico de envios.</figcaption></figure>
+
+<h3 id="criar-um-canal">Criar um canal<a class="anchor" href="#criar-um-canal" aria-label="Link para esta seção">#</a></h3>
+<ol class="steps">
+  <li>Clique em <span class="ui">+ Canal</span>, dê um nome e escolha o tipo.</li>
+  <li>Preencha os campos do tipo (tabela abaixo) e salve.</li>
+  <li>Clique em <span class="ui">Testar</span> na lista: o OmniDude envia uma mensagem de teste e mostra o resultado.</li>
+</ol>
+<figure class="figure"><a class="zoom" href="img/manual/form-canal.jpg" title="Clique para ampliar"><img src="img/manual/form-canal.jpg" alt="O formulário de canal para Telegram." loading="lazy"></a><figcaption>O formulário de canal para Telegram.</figcaption></figure>
+<table>
+  <thead><tr><th>Canal</th><th>Configuração</th><th>Observações</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Webhook</strong></td><td>URL; segredo opcional</td><td><code>POST</code> de um JSON. Com segredo, o corpo vai assinado. Não segue redirecionamentos.</td></tr>
+    <tr><td><strong>Telegram</strong></td><td>token do bot; chat (id numérico ou <code>@canal</code>); endereço da API (opcional)</td><td>O token vai na URL da API do Telegram: nenhuma mensagem de erro o repete.</td></tr>
+    <tr><td><strong>E-mail</strong></td><td>servidor, porta, segurança (STARTTLS 587, SSL/TLS 465 ou nenhuma 25), remetente, destinatários, usuário e senha (opcionais)</td><td>Texto simples em UTF-8. O STARTTLS é exigido: nunca cai para texto puro sem avisar.</td></tr>
+  </tbody>
+</table>
+<p>Os segredos (segredo do webhook, token, senha) ficam cifrados no banco; a tela só informa se existem. Ao editar, deixar o campo em branco <strong>mantém</strong> o atual.</p>
+
+<h3 id="criar-uma-regra">Criar uma regra<a class="anchor" href="#criar-uma-regra" aria-label="Link para esta seção">#</a></h3>
+<p>Em <em>Regras</em>, <span class="ui">+ Regra</span>:</p>
+<figure class="figure"><a class="zoom" href="img/manual/form-regra.jpg" title="Clique para ampliar"><img src="img/manual/form-regra.jpg" alt="O formulário de regra: canal, gravidade mínima, tipos de evento, dispositivo e aviso de recuperação." loading="lazy"></a><figcaption>O formulário de regra: canal, gravidade mínima, tipos de evento, dispositivo e aviso de recuperação.</figcaption></figure>
+<ul>
+  <li><strong>Canal:</strong> quem recebe.</li>
+  <li><strong>Gravidade mínima:</strong> <em>qualquer</em> (informativo ou pior), <em>atenção ou pior</em> ou <em>só críticos</em>.</li>
+  <li><strong>Tipos de evento:</strong> nenhum marcado significa <em>todos</em>.</li>
+  <li><strong>Dispositivo:</strong> todos, ou só um.</li>
+  <li><strong>Avisar também da recuperação:</strong> “voltou” é informativo, então, com esta opção ligada, ele segue o filtro de <em>tipo</em> e de <em>dispositivo</em> em vez do de gravidade. Sem isso, uma regra “atenção ou pior” avisaria da queda e nunca da volta.</li>
+</ul>
+<div class="tip"><p><strong>Receita comum:</strong> um canal para o plantão, com uma regra “atenção ou pior” e recuperação ligada; outro canal de baixa prioridade com tudo (“qualquer”), para consulta posterior.</p></div>
+<p>Um canal com duas regras que casam com o mesmo evento recebe <strong>uma</strong> mensagem só.</p>
+
+<h3 id="confiabilidade-e-anti-ruido">Confiabilidade e anti-ruído<a class="anchor" href="#confiabilidade-e-anti-ruido" aria-label="Link para esta seção">#</a></h3>
+<ul>
+  <li>O envio é <strong>assíncrono</strong>: não atrasa a checagem que gerou o evento.</li>
+  <li>Até <strong>3 tentativas</strong> para falha de rede, resposta 5xx ou 429. Erros de configuração (4xx, senha recusada) não são repetidos.</li>
+  <li>A <strong>mesma mensagem</strong> não vai duas vezes ao mesmo canal dentro de uma janela (60 s por padrão; ajustável).</li>
+  <li>No máximo <strong>30 mensagens por minuto</strong> por canal; o excedente é registrado como <em>suprimido</em>.</li>
+  <li>O <a href="administracao.html#modo-de-manutencao">modo de manutenção</a> suspende todas as notificações.</li>
+</ul>
+<h3 id="historico-de-envios">Histórico de envios<a class="anchor" href="#historico-de-envios" aria-label="Link para esta seção">#</a></h3>
+<p>Cada resultado final fica no histórico (30 dias): <em>enviada</em>, <em>falhou</em> (com o motivo), <em>suprimida</em> ou <em>teste</em>. É o primeiro lugar para olhar quando um alerta “não chegou”.</p>
+
+<h3 id="webhook">Webhook<a class="anchor" href="#webhook" aria-label="Link para esta seção">#</a></h3>
+<p>O OmniDude faz um <code>POST</code> com um JSON como este:</p>
+<pre><code>{
+  "source": "omnidude",
+  "eventId": 42,
+  "ts": 1793147934,
+  "severity": "CRITICAL",
+  "type": "DEVICE_DOWN",
+  "deviceId": 12,
+  "deviceName": "firewall-borda",
+  "message": "firewall-borda (192.0.2.10) está inacessível"
+}</code></pre>
+<p>Se o canal tem <strong>segredo</strong>, o corpo é assinado com HMAC-SHA256 e a assinatura vai no cabeçalho <code>X-OmniDude-Signature: sha256=&lt;hex&gt;</code>. Para validar no receptor (Python):</p>
+<pre><code>import hmac, hashlib
+
+def valido(corpo: bytes, cabecalho: str, segredo: str) -&gt; bool:
+    esperado = "sha256=" + hmac.new(segredo.encode(), corpo, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(esperado, cabecalho)</code></pre>
+<div class="note"><p>Calcule a assinatura sobre o corpo <strong>exatamente como recebido</strong>, antes de decodificar o JSON. Responda com 2xx; outros status contam como falha.</p></div>
+<div class="note"><p>Telegram e e-mail foram testados contra servidores locais simulados (HTTP e SMTP), não contra a API real do Telegram nem um provedor SMTP; STARTTLS e SSL não foram exercitados. Use <span class="ui">Testar</span> para validar o seu.</p></div>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="identidade.html"><small>Anterior</small>Identidade estável com DHCP</a><a class="next" href="mapa-publico.html"><small>Próximo</small>Mapa público</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#eventos">Eventos</a></li><li class="l3"><a href="#confirmar-ack">Confirmar (ack)</a></li><li class="l2"><a href="#notificacoes">Notificações</a></li><li class="l3"><a href="#criar-um-canal">Criar um canal</a></li><li class="l3"><a href="#criar-uma-regra">Criar uma regra</a></li><li class="l3"><a href="#confiabilidade-e-anti-ruido">Confiabilidade e anti-ruído</a></li><li class="l3"><a href="#historico-de-envios">Histórico de envios</a></li><li class="l3"><a href="#webhook">Webhook</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

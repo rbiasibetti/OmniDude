@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Topologia e enlaces · Manual do OmniDude</title>
+<meta name="description" content="Como o OmniDude descobre quem está ligado a quem (LLDP, CDP, MNDP, FDB e ARP), as origens e a confiança de cada enlace, e como confirmar ou descartar sugestões.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a class="current" aria-current="page" href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Usando · capítulo 08</p><h1>Topologia e enlaces</h1><p class="lead">Como o OmniDude descobre quem está ligado a quem (LLDP, CDP, MNDP, FDB e ARP), as origens e a confiança de cada enlace, e como confirmar ou descartar sugestões.</p></header>
+<article class="prose">
+<h2 id="detectar-enlaces">Detectar enlaces<a class="anchor" href="#detectar-enlaces" aria-label="Link para esta seção">#</a></h2>
+<p><span class="ui">Detectar enlaces</span> lê, de cada equipamento SNMP, os <strong>vizinhos anunciados</strong>, a <strong>tabela de encaminhamento (FDB)</strong> e a <strong>tabela ARP</strong>, e propõe enlaces. Tudo entra como <strong>sugestão</strong> (linha tracejada roxa): nada é definitivo até você confirmar.</p>
+<ol class="steps">
+  <li>Garanta que os equipamentos tenham perfil SNMP e que as interfaces tenham sido lidas (<span class="ui">Ler via SNMP</span>).</li>
+  <li>Clique em <span class="ui">Detectar enlaces</span> na barra do mapa. Aparecem as sugestões e uma mensagem com o resumo.</li>
+  <li><strong>Clique no enlace</strong> para ver a origem, o motivo e a evidência; ajuste as interfaces se necessário.</li>
+  <li><span class="ui">Confirmar</span> o que está certo, ou <span class="ui">Descartar</span> o que não está (uma sugestão descartada é rejeitada e <strong>não volta</strong> no próximo <em>Detectar enlaces</em>).</li>
+  <li><span class="ui">Confirmar sugeridos (N)</span>, na barra do mapa (só aparece quando há sugestões), confirma todos de uma vez, quando você já revisou.</li>
+</ol>
+<div class="tip"><p>Rode a detecção de novo depois de mudanças na rede. Uma rodada completa também remove as <strong>sugestões automáticas</strong> que não foram reencontradas (host que mudou de porta, nó deduzido que sumiu). Se alguma leitura falhar, <em>nada</em> é removido, e enlaces confirmados nunca são tocados.</p></div>
+
+<h2 id="de-onde-vem-cada-enlace">De onde vem cada enlace<a class="anchor" href="#de-onde-vem-cada-enlace" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Origem</th><th>Evidência</th><th>Confiança</th></tr></thead>
+  <tbody>
+    <tr><td><code>LLDP</code>, <code>CDP</code>, <code>MNDP</code></td><td>O próprio equipamento anuncia quem está do outro lado de cada porta.</td><td>Alta</td></tr>
+    <tr><td><code>FDB</code></td><td>A porta de um switch aprendeu o MAC de um dispositivo. Um único MAC indica host direto; o MAC de outro switch, que cobre os demais, indica enlace entre switches.</td><td>Média a alta</td></tr>
+    <tr><td><code>INFERRED</code></td><td>Suposição por falta de dados (traço pontilhado cinza).</td><td>Baixa</td></tr>
+    <tr><td><code>MANUAL</code></td><td>Você desenhou o enlace.</td><td>Confirmado</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><strong>LLDP</strong> é o padrão aberto; <strong>CDP</strong> é da Cisco; <strong>MNDP</strong> é da MikroTik. Os OIDs de CDP e MNDP seguem as MIBs publicadas e só foram testados contra agentes simulados.</li>
+  <li><span class="ui">Vizinhos</span>, no inspetor, lê só os anúncios de um equipamento.</li>
+</ul>
+<figure class="figure wide"><a class="zoom" href="img/manual/mapa.jpg" title="Clique para ampliar"><img src="img/manual/mapa.jpg" alt="Enlaces confirmados da topologia do laboratório; as nuvens tracejadas são switches sem SNMP deduzidos pela FDB." loading="lazy"></a><figcaption>Enlaces confirmados da topologia do laboratório; as nuvens tracejadas são switches sem SNMP deduzidos pela FDB.</figcaption></figure>
+
+<h2 id="como-a-deducao-funciona">Como a dedução funciona<a class="anchor" href="#como-a-deducao-funciona" aria-label="Link para esta seção">#</a></h2>
+<p>Para cada porta de cada switch com FDB, o OmniDude aplica estas regras, nesta ordem:</p>
+<ol>
+  <li>Outro switch com FDB que enxerga <strong>todos os demais</strong> da porta é o vizinho direto; o enlace liga as duas portas.</li>
+  <li>Um único <strong>roteador, firewall ou AP</strong> sem FDB na porta é o vizinho direto; os outros dispositivos da porta ficam <em>atrás dele</em> (enlace <code>INFERRED</code>: sem SNMP não há como saber se é cabo ou Wi-Fi).</li>
+  <li>Um único <strong>MAC conhecido</strong> é um host ligado direto.</li>
+  <li><strong>Vários MACs</strong> sem vizinho que os explique indicam um switch, hub ou AP <strong>sem SNMP</strong> no meio: o OmniDude cria um <strong>nó deduzido</strong> (nuvem tracejada) ligado à porta e aos dispositivos que estão atrás dele.</li>
+  <li>O que continuar sem nenhum enlace e estiver na rede do <strong>gateway</strong> do servidor é ligado a ele (<code>INFERRED</code>). O gateway vem de <code>/proc/net/route</code> (Linux); fora do Linux, só se houver um único roteador ou firewall cadastrado. Um gateway não cadastrado é <em>avisado</em>, não adivinhado.</li>
+</ol>
+<p>A tabela ARP dos roteadores (e a do próprio servidor) completa o MAC que faltava nos dispositivos e informa hosts que ainda não estão no inventário.</p>
+
+<h3 id="nos-deduzidos-switches-sem-snmp">Nós deduzidos (switches sem SNMP)<a class="anchor" href="#nos-deduzidos-switches-sem-snmp" aria-label="Link para esta seção">#</a></h3>
+<p>Um hub ou switch não gerenciável não aparece em nenhuma tabela, mas deixa rastros: vários MACs enxergados numa só porta. Nesse caso o mapa mostra uma <em>nuvem</em> chamada “Switch/hub não gerenciável (<em>equipamento · porta</em>)”, sem SNMP, ligada à porta e aos hosts atrás dele. Você pode renomeá-lo e usá-lo como qualquer nó.</p>
+
+<h2 id="confirmar-ajustar-e-excluir">Confirmar, ajustar e excluir<a class="anchor" href="#confirmar-ajustar-e-excluir" aria-label="Link para esta seção">#</a></h2>
+<p>Clique em qualquer enlace para abrir o formulário dele.</p>
+<ul>
+  <li><span class="ui">Confirmar</span> torna o enlace definitivo e o protege da detecção.</li>
+  <li>Você pode escolher as <strong>interfaces</strong> das duas pontas (o que habilita o tráfego no mapa), o <strong>tipo</strong> e um <strong>rótulo</strong>.</li>
+  <li><span class="ui">Descartar</span> (numa sugestão) ou <span class="ui">Excluir</span> (num enlace confirmado) remove o enlace; a detecção <strong>não recria</strong> o que você descartou.</li>
+</ul>
+<p>Para ligações que a rede não anuncia (VPN, operadora, equipamento remoto), crie <a href="mapa.html#enlaces-manuais">enlaces manuais</a>.</p>
+
+<h2 id="limites">Limites<a class="anchor" href="#limites" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li>A FDB só é lida no <strong>contexto padrão</strong> do agente. Equipamentos Cisco que exigem <code>community@vlan</code> (uma leitura por VLAN) não têm a FDB lida.</li>
+  <li>Um roteador doméstico sem SNMP, sem API e sem LLDP <strong>não revela</strong> quem está no Wi-Fi ou no cabo: só dá para inferir.</li>
+  <li>Os OIDs de CDP e MNDP foram testados apenas contra agentes simulados.</li>
+</ul>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="descoberta.html"><small>Anterior</small>Descoberta de rede</a><a class="next" href="identidade.html"><small>Próximo</small>Identidade estável com DHCP</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#detectar-enlaces">Detectar enlaces</a></li><li class="l2"><a href="#de-onde-vem-cada-enlace">De onde vem cada enlace</a></li><li class="l2"><a href="#como-a-deducao-funciona">Como a dedução funciona</a></li><li class="l3"><a href="#nos-deduzidos-switches-sem-snmp">Nós deduzidos (switches sem SNMP)</a></li><li class="l2"><a href="#confirmar-ajustar-e-excluir">Confirmar, ajustar e excluir</a></li><li class="l2"><a href="#limites">Limites</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

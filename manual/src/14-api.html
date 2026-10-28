@@ -1,0 +1,107 @@
+---
+title: API REST
+group: Referência
+desc: Autenticação por sessão e CSRF, endpoints por recurso, tempo real por SSE e exemplos com curl e Python.
+---
+<p>A interface usa a mesma API pública que está documentada aqui, então tudo que a tela faz dá para automatizar. <code>GET</code> exige um usuário autenticado; qualquer outro método exige <span class="tag admin">ADMIN</span>. Erros voltam como JSON <code>{"error": "..."}</code> com o status HTTP adequado (400 para entrada inválida, 401 sem login, 403 sem permissão ou sem token CSRF, 404 e 409 conforme o caso).</p>
+
+<h2>Autenticação</h2>
+<p>A API usa <strong>cookie de sessão</strong> e proteção CSRF por <em>double submit</em>: o servidor entrega o cookie <code>XSRF-TOKEN</code> e você o devolve no cabeçalho <code>X-XSRF-TOKEN</code> em toda requisição que altera estado.</p>
+<ol class="steps">
+  <li>Abra uma página (por exemplo <code>/login.html</code>) para receber o cookie <code>XSRF-TOKEN</code>.</li>
+  <li>Envie <code>POST /login</code> com <code>username</code> e <code>password</code> (formulário) e o cabeçalho <code>X-XSRF-TOKEN</code>.</li>
+  <li>O login <strong>renova</strong> o token: faça um <code>GET /api/me</code> para pegar o novo valor antes de qualquer <code>POST</code>.</li>
+</ol>
+<pre><code>BASE=http://127.0.0.1:8080
+curl -s -c jar -b jar "$BASE/login.html" -o /dev/null
+TOKEN=$(awk '/XSRF-TOKEN/ {print $7}' jar | tail -1)
+curl -s -c jar -b jar -X POST "$BASE/login" -H "X-XSRF-TOKEN: $TOKEN" \
+     -d 'username=admin&amp;password=SUA-SENHA'
+curl -s -c jar -b jar "$BASE/api/me" -o /dev/null          # o login renova o token CSRF
+TOKEN=$(awk '/XSRF-TOKEN/ {print $7}' jar | tail -1)
+
+# cadastrar um dispositivo
+curl -s -b jar -X POST "$BASE/api/devices" -H "X-XSRF-TOKEN: $TOKEN" \
+     -H 'Content-Type: application/json' \
+     -d '{"name":"gateway","primaryIp":"192.168.1.1","deviceType":"ROUTER"}'
+
+# listar
+curl -s -b jar "$BASE/api/devices"</code></pre>
+<p>O mesmo em Python, só com a biblioteca padrão:</p>
+<pre><code>import json, urllib.request, urllib.parse, http.cookiejar
+
+BASE = "http://127.0.0.1:8080"
+jar = http.cookiejar.CookieJar()
+op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+xsrf = lambda: next(c.value for c in jar if c.name == "XSRF-TOKEN")
+
+op.open(BASE + "/login.html").read()
+dados = urllib.parse.urlencode({"username": "admin", "password": "SUA-SENHA"}).encode()
+op.open(urllib.request.Request(BASE + "/login", data=dados, headers={"X-XSRF-TOKEN": xsrf()})).read()
+op.open(BASE + "/api/me").read()                      # renova o token
+
+req = urllib.request.Request(BASE + "/api/devices", method="POST",
+        data=json.dumps({"name": "gateway", "primaryIp": "192.168.1.1", "deviceType": "ROUTER"}).encode(),
+        headers={"X-XSRF-TOKEN": xsrf(), "Content-Type": "application/json"})
+print(json.load(op.open(req)))</code></pre>
+<div class="note"><p>Cada login derruba o token CSRF anterior; sessões abertas também são derrubadas quando o acesso do usuário muda (perfil, desativação, nova senha). Se receber 403 numa escrita, renove o token com um <code>GET /api/me</code>.</p></div>
+
+<h2>Recursos</h2>
+<table>
+  <thead><tr><th>Recurso</th><th>Endpoints principais</th></tr></thead>
+  <tbody>
+    <tr><td>Sessão</td><td><code>POST /login</code>, <code>POST /logout</code>, <code>GET /api/me</code>, <code>POST /api/me/password</code></td></tr>
+    <tr><td>Dispositivos</td><td><code>GET/POST /api/devices</code>, <code>GET/PUT/DELETE /api/devices/{id}</code></td></tr>
+    <tr><td>Checagens</td><td><code>GET/POST /api/devices/{id}/checks</code>, <code>PUT/DELETE /api/checks/{id}</code>, <code>POST /api/checks/{id}/run</code>, <code>GET /api/checks/{id}/results?range=1h|6h|24h|7d|30d</code></td></tr>
+    <tr><td>Perfis SNMP</td><td><code>GET/POST /api/snmp-profiles</code>, <code>PUT/DELETE /api/snmp-profiles/{id}</code></td></tr>
+    <tr><td>Interfaces</td><td><code>GET /api/devices/{id}/interfaces</code>, <code>POST /api/devices/{id}/refresh</code>, <code>PUT /api/interfaces/{id}</code>, <code>GET /api/interfaces/{id}/metrics?range=1h|6h|24h|7d|30d|90d</code></td></tr>
+    <tr><td>Mapas</td><td><code>GET/POST /api/maps</code>, <code>GET /api/maps/{id}</code>, <code>POST /api/maps/{id}/nodes</code>, <code>PUT/DELETE /api/maps/{id}/nodes/{deviceId}</code>, <code>GET/PUT /api/maps/{id}/publication</code> <span class="tag admin">ADMIN</span></td></tr>
+    <tr><td>Enlaces</td><td><code>GET/POST /api/links</code>, <code>PUT/DELETE /api/links/{id}</code>, <code>POST /api/links/{id}/confirm</code>, <code>POST /api/devices/{id}/lldp</code>, <code>POST /api/topology/refresh</code></td></tr>
+    <tr><td>Descoberta</td><td><code>POST/GET /api/discovery/jobs</code>, <code>GET /api/discovery/jobs/{id}[/hosts]</code>, <code>POST /api/discovery/jobs/{id}/cancel</code>, <code>POST /api/discovery/jobs/{id}/import</code>, <code>POST /api/discovery/hosts/{id}/ignore</code></td></tr>
+    <tr><td>Identidade</td><td><code>GET /api/devices/{id}/identity</code>, <code>POST/DELETE /api/devices/{id}/macs</code>, <code>POST /api/devices/{id}/locate</code>, <code>POST /api/discovery/hosts/{id}/adopt</code></td></tr>
+    <tr><td>Eventos e painel</td><td><code>GET /api/events</code>, <code>POST /api/events/{id}/ack</code>, <code>GET /api/summary</code>, <code>GET /api/dashboard</code></td></tr>
+    <tr><td>Notificações <span class="tag admin">ADMIN</span></td><td><code>GET/POST/PUT/DELETE /api/notification-channels</code>, <code>POST /api/notification-channels/{id}/test</code>, <code>GET/POST/PUT/DELETE /api/notification-rules</code>, <code>GET /api/notification-log</code></td></tr>
+    <tr><td>Administração <span class="tag admin">ADMIN</span></td><td><code>GET/PUT /api/settings</code>, <code>GET/POST/PUT/DELETE /api/users</code>, <code>POST /api/admin/backup</code>, <code>GET /api/admin/backups</code>, <code>GET/DELETE /api/admin/backups/{nome}</code></td></tr>
+    <tr><td>Público (sem login)</td><td><code>GET /public/{token}</code> (página), <code>GET /api/public/maps/{token}</code> (dados reduzidos)</td></tr>
+    <tr><td>Tempo real</td><td><code>GET /api/stream</code> (SSE)</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>Tudo que é <code>GET</code> de <em>Administração</em> e <em>Notificações</em> também exige ADMIN, porque pode revelar a configuração. Um teste automatizado varre todas as rotas e garante isso.</p></div>
+
+<h2>Exemplos</h2>
+<h3>Criar um perfil SNMP e rodar uma descoberta</h3>
+<pre><code># perfil v2c
+curl -s -b jar -X POST "$BASE/api/snmp-profiles" -H "X-XSRF-TOKEN: $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"name":"Rede v2c","version":"2c","port":161,"timeoutMs":1500,"retries":1,"community":"public"}'
+
+# varredura (authorized=true confirma que você pode varrer a faixa)
+curl -s -b jar -X POST "$BASE/api/discovery/jobs" -H "X-XSRF-TOKEN: $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"cidr":"192.168.1.0/24","snmpProfileIds":[1],"ports":[22,80,443],"authorized":true}'
+
+# acompanhar e listar os hosts
+curl -s -b jar "$BASE/api/discovery/jobs/1"
+curl -s -b jar "$BASE/api/discovery/jobs/1/hosts"</code></pre>
+<h3>Importar hosts da descoberta</h3>
+<pre><code>curl -s -b jar -X POST "$BASE/api/discovery/jobs/1/import" -H "X-XSRF-TOKEN: $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"hosts":[{"hostId":3,"name":"core-sw","deviceType":"SWITCH"}],"mapId":1,"openPortChecks":false}'</code></pre>
+<h3>Criar um enlace manual</h3>
+<pre><code>curl -s -b jar -X POST "$BASE/api/links" -H "X-XSRF-TOKEN: $TOKEN" -H 'Content-Type: application/json' \
+     -d '{"sourceDeviceId":5,"targetDeviceId":12,"kind":"INTERNET","label":"Fibra 500 Mb"}'</code></pre>
+<p>Valores de <code>kind</code>: <code>CABLE</code>, <code>WIFI</code>, <code>VPN</code>, <code>INTERNET</code>, <code>OTHER</code>. Tipos de dispositivo (<code>deviceType</code>): <code>ROUTER</code>, <code>SWITCH</code>, <code>FIREWALL</code>, <code>ACCESS_POINT</code>, <code>SERVER</code>, <code>WORKSTATION</code>, <code>PRINTER</code>, <code>STORAGE</code>, <code>CLOUD</code>, <code>NETWORK</code>, <code>OTHER</code>.</p>
+<h3>Resumo para um painel externo</h3>
+<pre><code>curl -s -b jar "$BASE/api/summary"</code></pre>
+
+<h2>Tempo real (SSE)</h2>
+<p><code>GET /api/stream</code> abre um fluxo <em>Server-Sent Events</em> (exige login). O servidor aceita até 500 conexões simultâneas. Eventos enviados:</p>
+<table>
+  <thead><tr><th>Evento</th><th>Quando</th></tr></thead>
+  <tbody>
+    <tr><td><code>device-status</code></td><td>O estado de um dispositivo mudou.</td></tr>
+    <tr><td><code>event</code></td><td>Um novo evento foi registrado.</td></tr>
+    <tr><td><code>devices-changed</code></td><td>Dispositivos foram criados, editados ou removidos.</td></tr>
+    <tr><td><code>link-traffic</code></td><td>Novas taxas de utilização dos enlaces.</td></tr>
+    <tr><td><code>discovery-progress</code></td><td>Progresso de uma varredura.</td></tr>
+  </tbody>
+</table>
+<pre><code>curl -N -b jar "$BASE/api/stream"</code></pre>
+<div class="tip"><p>Atrás de um proxy reverso, desligue o <em>buffering</em> para <code>/api/stream</code>, ou os eventos chegam em blocos atrasados (<a href="instalacao.html#acessar-de-outras-maquinas-https">exemplo de nginx</a>).</p></div>

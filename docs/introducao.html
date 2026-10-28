@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Introdução · Manual do OmniDude</title>
+<meta name="description" content="O que o OmniDude faz, como ele pensa a sua rede (dispositivos, checagens, enlaces, mapas e eventos) e o que esperar dele.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a class="current" aria-current="page" href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Começando · capítulo 01</p><h1>Introdução</h1><p class="lead">O que o OmniDude faz, como ele pensa a sua rede (dispositivos, checagens, enlaces, mapas e eventos) e o que esperar dele.</p></header>
+<article class="prose">
+<h2 id="o-que-e-o-omnidude">O que é o OmniDude<a class="anchor" href="#o-que-e-o-omnidude" aria-label="Link para esta seção">#</a></h2>
+<p>O OmniDude NMS é um sistema de monitoramento de rede (<em>Network Management System</em>) inspirado no The Dude. Você cadastra ou descobre os equipamentos, arrasta-os num mapa e vê, em tempo real, o que está verde ou vermelho. Por baixo do mapa, ele mede latência e disponibilidade, lê o tráfego das interfaces por SNMP e envia alertas.</p>
+<ul>
+  <li><strong>Um arquivo, um processo.</strong> Spring Boot com SQLite embutido: sem servidor de banco, sem fila, sem agentes nos equipamentos. Precisa só de Java 21.</li>
+  <li><strong>Interface web.</strong> Abre no navegador; as bibliotecas são servidas pelo próprio servidor, sem CDN.</li>
+  <li><strong>Seguro por padrão.</strong> Escuta só em <code>127.0.0.1</code>, cifra segredos com AES-256-GCM, protege contra CSRF e só varre redes privadas.</li>
+</ul>
+
+<h2 id="conceitos">Conceitos<a class="anchor" href="#conceitos" aria-label="Link para esta seção">#</a></h2>
+<p>Cinco ideias bastam para entender toda a interface.</p>
+<div class="grid2">
+  <div><h4>Dispositivo</h4><p>Qualquer coisa que você quer acompanhar: roteador, switch, firewall, access point, servidor, estação, impressora, storage. Tem nome, IP, tipo e, opcionalmente, um perfil SNMP.</p></div>
+  <div><h4>Checagem (serviço)</h4><p>Um teste repetido: ping, porta TCP, HTTP/HTTPS, DNS ou SNMP. O estado do dispositivo nasce do resultado delas.</p></div>
+  <div><h4>Enlace</h4><p>A ligação entre dois dispositivos (cabo, Wi-Fi, VPN, Internet). Pode ser descoberto, sugerido ou desenhado por você.</p></div>
+  <div><h4>Mapa</h4><p>A vista dos dispositivos e enlaces com posições gravadas. Pode haver vários mapas, e um deles pode ser publicado só para leitura.</p></div>
+  <div><h4>Evento</h4><p>O registro de uma mudança: dispositivo ou serviço caiu e voltou, interface de enlace caiu, descoberta concluída.</p></div>
+  <div><h4>Perfil SNMP</h4><p>As credenciais SNMP (v1, v2c ou v3) reutilizáveis por vários equipamentos. Ficam cifradas no banco.</p></div>
+</div>
+
+<h2 id="estados-de-um-dispositivo">Estados de um dispositivo<a class="anchor" href="#estados-de-um-dispositivo" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Estado</th><th>Quando acontece</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ok">UP</span></td><td>A checagem âncora responde e nenhum outro serviço está falhando nem lento.</td></tr>
+    <tr><td><span class="att">ATENÇÃO</span></td><td>O dispositivo responde, mas algum outro serviço está DOWN ou mais lento que o limite de latência configurado.</td></tr>
+    <tr><td><span class="bad">DOWN</span></td><td>A checagem âncora (ping; se não houver, SNMP) falhou o número de vezes configurado. Os alertas dos serviços dele ficam suprimidos.</td></tr>
+    <tr><td>DESCONHECIDO</td><td>Ainda não houve resultado, ou o dispositivo é um nó lógico/deduzido, sem checagens.</td></tr>
+  </tbody>
+</table>
+<p>No mapa, os estados aparecem como borda verde (UP), âmbar (ATENÇÃO), vermelha (DOWN) e cinza (desconhecido). Um dispositivo em manutenção aparece como <strong>PAUSADO</strong> e não é checado.</p>
+
+<h2 id="como-os-dados-entram">Como os dados entram<a class="anchor" href="#como-os-dados-entram" aria-label="Link para esta seção">#</a></h2>
+<figure class="diagram"><svg role="img" aria-label="Visão geral: o navegador conversa com o servidor por REST e SSE; o servidor mede a rede, grava no SQLite e envia alertas." viewBox="0 0 900 330" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-arrow"/></marker></defs>
+  <rect class="d-box" x="10" y="95" width="170" height="120" rx="12"/>
+  <text class="d-t b c" x="95" y="125">Navegador</text>
+  <text class="d-t s c" x="95" y="150">Mapa · Dashboard</text>
+  <text class="d-t s c" x="95" y="168">Inspetor · Gráficos</text>
+  <text class="d-t s c" x="95" y="190">Alpine · Cytoscape · uPlot</text>
+
+  <rect class="d-box hl" x="270" y="20" width="340" height="290" rx="14"/>
+  <text class="d-t b c" x="440" y="46">Servidor OmniDude (um único .jar)</text>
+  <rect class="d-box" x="290" y="62" width="145" height="52" rx="8"/><text class="d-t c" x="362" y="84">API REST</text><text class="d-t s c" x="362" y="102">sessão · CSRF · papéis</text>
+  <rect class="d-box" x="445" y="62" width="145" height="52" rx="8"/><text class="d-t c" x="517" y="84">Tempo real</text><text class="d-t s c" x="517" y="102">SSE</text>
+  <rect class="d-box" x="290" y="126" width="145" height="52" rx="8"/><text class="d-t c" x="362" y="148">Checagens</text><text class="d-t s c" x="362" y="166">agenda · histerese</text>
+  <rect class="d-box" x="445" y="126" width="145" height="52" rx="8"/><text class="d-t c" x="517" y="148">Descoberta</text><text class="d-t s c" x="517" y="166">topologia · identidade</text>
+  <rect class="d-box" x="290" y="190" width="145" height="52" rx="8"/><text class="d-t c" x="362" y="212">Tráfego</text><text class="d-t s c" x="362" y="230">contadores SNMP</text>
+  <rect class="d-box" x="445" y="190" width="145" height="52" rx="8"/><text class="d-t c" x="517" y="212">Notificações</text><text class="d-t s c" x="517" y="230">regras · anti-ruído</text>
+  <rect class="d-box up" x="290" y="256" width="300" height="42" rx="8"/><text class="d-t c" x="440" y="274">SQLite (WAL)</text><text class="d-t s c" x="440" y="290">dados · histórico · segredos cifrados</text>
+
+  <rect class="d-box" x="720" y="20" width="170" height="130" rx="12"/>
+  <text class="d-t b c" x="805" y="46">A sua rede</text>
+  <text class="d-t s c" x="805" y="70">Roteadores · switches</text><text class="d-t s c" x="805" y="88">Servidores · firewalls</text><text class="d-t s c" x="805" y="106">Impressoras · APs</text>
+  <text class="d-t s c" x="805" y="132">ICMP · TCP · HTTP · DNS · SNMP</text>
+  <rect class="d-box" x="720" y="180" width="170" height="130" rx="12"/>
+  <text class="d-t b c" x="805" y="206">Destinos de alerta</text>
+  <text class="d-t s c" x="805" y="232">E-mail (SMTP)</text><text class="d-t s c" x="805" y="252">Telegram</text><text class="d-t s c" x="805" y="272">Webhook assinado</text>
+
+  <path class="d-line" d="M180 155H268" marker-end="url(#a1)" marker-start="url(#a1)"/>
+  <text class="d-t s c" x="224" y="146">REST + SSE</text>
+  <path class="d-line" d="M610 90H718" marker-end="url(#a1)" marker-start="url(#a1)"/>
+  <path class="d-line" d="M610 215H718" marker-end="url(#a1)"/>
+</svg><figcaption>Visão geral: o navegador conversa com o servidor por REST e SSE; o servidor mede a rede, grava no SQLite e envia alertas.</figcaption></figure>
+<p>Há três caminhos para colocar equipamentos no mapa, que você pode combinar:</p>
+<ol>
+  <li><strong>Descoberta</strong>: varre uma faixa de IPs e identifica o que responde (<a href="descoberta.html">capítulo 7</a>).</li>
+  <li><strong>Cadastro manual</strong>: <span class="ui">+ Dispositivo</span> no mapa (<a href="mapa.html">capítulo 4</a>).</li>
+  <li><strong>Leitura por SNMP</strong>: traz interfaces, MACs e vizinhos de equipamentos gerenciáveis (<a href="snmp-trafego.html">capítulo 6</a>).</li>
+</ol>
+
+<h2 id="perfis-de-acesso">Perfis de acesso<a class="anchor" href="#perfis-de-acesso" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Perfil</th><th>Pode</th></tr></thead>
+  <tbody>
+    <tr><td><span class="tag admin">ADMIN</span></td><td>Tudo: cadastrar, editar, apagar, descobrir, publicar o mapa, gerenciar canais, usuários, ajustes e backups.</td></tr>
+    <tr><td><span class="tag viewer">VIEWER</span></td><td>Só consultar: mapa, inspetor, gráficos, lista de dispositivos, eventos e Dashboard. Não vê <em>Configurações</em>, e qualquer tentativa de alterar algo é recusada pelo servidor, não só escondida na tela.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="o-que-ele-nao-faz-ainda">O que ele não faz (ainda)<a class="anchor" href="#o-que-ele-nao-faz-ainda" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li>Não instala agentes nem lê métricas de sistema operacional (CPU, disco) dos servidores; o foco é rede.</li>
+  <li>A descoberta é só IPv4.</li>
+  <li>As leituras SNMP foram validadas contra agentes simulados, não contra uma frota de equipamentos reais. Veja <a href="referencia.html#limitacoes-conhecidas">limitações conhecidas</a>.</li>
+</ul>
+<div class="warn"><p>Use o OmniDude apenas em redes próprias ou com autorização expressa. A descoberta envia pacotes a cada endereço da faixa.</p></div>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><span></span><a class="next" href="instalacao.html"><small>Próximo</small>Instalação</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#o-que-e-o-omnidude">O que é o OmniDude</a></li><li class="l2"><a href="#conceitos">Conceitos</a></li><li class="l2"><a href="#estados-de-um-dispositivo">Estados de um dispositivo</a></li><li class="l2"><a href="#como-os-dados-entram">Como os dados entram</a></li><li class="l2"><a href="#perfis-de-acesso">Perfis de acesso</a></li><li class="l2"><a href="#o-que-ele-nao-faz-ainda">O que ele não faz (ainda)</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

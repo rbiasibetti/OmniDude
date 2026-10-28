@@ -1,0 +1,48 @@
+---
+title: Identidade estável com DHCP
+group: Usando
+desc: Como o OmniDude continua reconhecendo um equipamento quando o DHCP muda o IP dele, e como ajudá-lo (MACs, reservas, avisos de conflito).
+---
+<h2>O problema</h2>
+<p>Numa rede com DHCP, o IP de um notebook, de uma câmera ou de um ponto de acesso pode mudar. Se o IP fosse a identidade, a troca apareceria como uma queda e um host “novo”, e o histórico seria perdido.</p>
+<p>No OmniDude o IP é só um atributo que muda. A <strong>identidade</strong> vem dos <strong>MACs conhecidos</strong> de cada dispositivo. Se o dispositivo cai e o MAC dele aparece em outro IP, o OmniDude atualiza o endereço e <em>tudo continua</em>: checagens, enlaces, posição no mapa e gráficos.</p>
+{{svg:dhcp|Um dispositivo muda de IP: o OmniDude vê o MAC dele no ARP em outro endereço e atualiza o IP.}}
+
+<h2>De onde vêm os MACs</h2>
+<p>Eles são aprendidos sozinhos:</p>
+<ul>
+  <li>do <strong>cadastro</strong> e da <strong>descoberta</strong>;</li>
+  <li>do <strong>ARP</strong> enquanto o dispositivo responde;</li>
+  <li>de <strong>todas as interfaces</strong>, nos equipamentos SNMP (<span class="ui">Ler via SNMP</span>).</li>
+</ul>
+<p>No inspetor, a seção <strong>Identidade</strong> mostra os MACs (com o fabricante e a origem) e os IPs anteriores. Dá para <strong>adicionar</strong> outro à mão (a placa Wi-Fi de um notebook, por exemplo) e <strong>remover</strong>. Um MAC pertence a um dispositivo só.</p>
+{{img:inspetor-switch.jpg|A seção Identidade do inspetor lista os MACs do core-sw com fabricante e origem.|wide}}
+
+<h2>O que acontece a cada minuto</h2>
+<p>O OmniDude compara o ARP do servidor (e, a cada 10 minutos, o dos roteadores e firewalls SNMP) com o inventário:</p>
+<table>
+  <thead><tr><th>Situação</th><th>Resultado</th></tr></thead>
+  <tbody>
+    <tr><td>Dispositivo <span class="bad">DOWN</span>, e o MAC dele aparece em <strong>outro IP que ninguém usa</strong></td><td>O IP é <strong>atualizado sozinho</strong>, com histórico, e um evento informa. Checagens, enlaces, posição e gráficos continuam os mesmos.</td></tr>
+    <tr><td>O MAC responde nos <strong>dois</strong> IPs</td><td>O novo vira <strong>endereço adicional</strong> (equipamento com duas interfaces).</td></tr>
+    <tr><td>Dispositivo ainda <span class="ok">UP</span> no IP antigo</td><td>Nada: espera (o ARP antigo pode só estar velho).</td></tr>
+    <tr><td>O IP de um dispositivo é visto com <strong>outro MAC</strong></td><td><strong>Aviso</strong> (uma vez): outra máquina pode ter assumido o endereço, e o dispositivo pode estar “UP” por engano. Se você trocou a placa, adicione o MAC novo no inspetor.</td></tr>
+    <tr><td>MAC <strong>aleatório</strong> (celular com endereço privado), de VM, ou de mais de um dispositivo</td><td><strong>Nunca</strong> decide sozinho.</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>A atualização automática só acontece com o dispositivo DOWN. Em <em>Ajustes → Identidade (DHCP)</em> você pode desligá-la (o sistema passa a só avisar) e mudar o intervalo de leitura do ARP dos roteadores.</p></div>
+
+<h2>Achar um IP que ninguém contatou</h2>
+<p>A tabela ARP só tem hosts com quem o servidor falou recentemente. Quando há dispositivos DOWN com MAC estável, o OmniDude faz o kernel <em>resolver</em> o ARP da sub-rede deles: envia um byte UDP para a porta 9 de cada endereço, sem privilégio e sem esperar resposta. Isso acontece no máximo a cada 5 minutos por sub-rede, e só para sub-redes em que o servidor tem interface, privadas e de até 1.024 endereços.</p>
+<p><span class="ui">Procurar novo IP</span> (inspetor de um dispositivo DOWN) faz essa busca na hora.</p>
+
+<h2>Na descoberta</h2>
+<p>Um host que tem o MAC (ou, como sugestão, o nome) de um dispositivo cadastrado com outro IP aparece como “Parece ser <em>X</em> (cadastrado com <em>Y</em>)”, com o botão <span class="ui">Atualizar IP</span>. Importá-lo como novo exige marcar essa opção de propósito. Veja <a href="descoberta.html#hosts-que-parecem-ja-cadastrados">Descoberta</a>.</p>
+
+<h2>Limites e recomendações</h2>
+<ul>
+  <li><strong>Sem ARP não há identidade nova.</strong> Dispositivos atrás de um roteador sem SNMP, em outra rede, não são reconhecidos.</li>
+  <li>Celulares com MAC aleatório só entram por <em>sugestão de nome</em>.</li>
+  <li>A melhor fonte seria o servidor DHCP (concessões e reservas), que o OmniDude ainda não lê.</li>
+</ul>
+<div class="tip"><p>Para o que importa (servidores, switches, impressoras, câmeras), <strong>reserve o IP no DHCP</strong>. A identificação por MAC é a rede de segurança, não um substituto para reservas.</p></div>

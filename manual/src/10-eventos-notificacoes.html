@@ -1,0 +1,93 @@
+---
+title: Eventos e notificações
+group: Usando
+desc: O registro de eventos, a confirmação (ack) e o envio de alertas por e-mail, Telegram e webhook, com regras por gravidade, tipo e dispositivo.
+---
+<h2>Eventos</h2>
+<p>Um <strong>evento</strong> registra uma mudança de estado. A tela <em>Eventos</em> mostra os mais recentes; a faixa no rodapé do mapa mostra os últimos, e o contador vermelho ao lado do menu conta os ainda não confirmados.</p>
+{{img:eventos.jpg|A tela de eventos: filtro por gravidade e confirmação individual.}}
+<table>
+  <thead><tr><th>Tipo</th><th>Quando é gerado</th></tr></thead>
+  <tbody>
+    <tr><td>Dispositivo caiu / voltou</td><td>A checagem âncora mudou para DOWN ou voltou a UP.</td></tr>
+    <tr><td>Dispositivo com atenção</td><td>O dispositivo responde, mas um serviço falha ou está lento.</td></tr>
+    <tr><td>Serviço falhou / recuperado</td><td>Um serviço (que não é a âncora) mudou de estado.</td></tr>
+    <tr><td>Enlace caiu / voltou</td><td>Uma interface ligada a um enlace confirmado mudou de estado.</td></tr>
+    <tr><td>Limite ultrapassado</td><td>Reservado para limiares de métricas.</td></tr>
+    <tr><td>Descoberta</td><td>Uma varredura terminou.</td></tr>
+    <tr><td>Sistema</td><td>Avisos do próprio OmniDude, como a troca automática de IP por DHCP ou um conflito de identidade.</td></tr>
+  </tbody>
+</table>
+<p>Cada evento tem uma <strong>gravidade</strong>: <em>informativo</em>, <em>atenção</em> ou <em>crítico</em>.</p>
+<h3>Confirmar (ack)</h3>
+<p><span class="ui">Confirmar</span> marca que alguém viu o evento. Com <em>só não confirmados</em> ligado, a lista mostra apenas o que ainda pede atenção, e o contador do menu diminui.</p>
+
+<h2>Notificações</h2>
+<p>Em <em>Configurações → Notificações</em> <span class="tag admin">ADMIN</span>. Dois conceitos:</p>
+<div class="grid2">
+  <div><h4>Canal</h4><p>Diz <em>para onde</em> enviar: um webhook, um bot do Telegram ou um servidor SMTP.</p></div>
+  <div><h4>Regra</h4><p>Diz <em>o que</em> cada canal recebe: gravidade mínima, tipos de evento e dispositivo.</p></div>
+</div>
+{{img:config-notifications.jpg|Canais, regras e o histórico de envios.}}
+
+<h3>Criar um canal</h3>
+<ol class="steps">
+  <li>Clique em <span class="ui">+ Canal</span>, dê um nome e escolha o tipo.</li>
+  <li>Preencha os campos do tipo (tabela abaixo) e salve.</li>
+  <li>Clique em <span class="ui">Testar</span> na lista: o OmniDude envia uma mensagem de teste e mostra o resultado.</li>
+</ol>
+{{img:form-canal.jpg|O formulário de canal para Telegram.}}
+<table>
+  <thead><tr><th>Canal</th><th>Configuração</th><th>Observações</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Webhook</strong></td><td>URL; segredo opcional</td><td><code>POST</code> de um JSON. Com segredo, o corpo vai assinado. Não segue redirecionamentos.</td></tr>
+    <tr><td><strong>Telegram</strong></td><td>token do bot; chat (id numérico ou <code>@canal</code>); endereço da API (opcional)</td><td>O token vai na URL da API do Telegram: nenhuma mensagem de erro o repete.</td></tr>
+    <tr><td><strong>E-mail</strong></td><td>servidor, porta, segurança (STARTTLS 587, SSL/TLS 465 ou nenhuma 25), remetente, destinatários, usuário e senha (opcionais)</td><td>Texto simples em UTF-8. O STARTTLS é exigido: nunca cai para texto puro sem avisar.</td></tr>
+  </tbody>
+</table>
+<p>Os segredos (segredo do webhook, token, senha) ficam cifrados no banco; a tela só informa se existem. Ao editar, deixar o campo em branco <strong>mantém</strong> o atual.</p>
+
+<h3>Criar uma regra</h3>
+<p>Em <em>Regras</em>, <span class="ui">+ Regra</span>:</p>
+{{img:form-regra.jpg|O formulário de regra: canal, gravidade mínima, tipos de evento, dispositivo e aviso de recuperação.}}
+<ul>
+  <li><strong>Canal:</strong> quem recebe.</li>
+  <li><strong>Gravidade mínima:</strong> <em>qualquer</em> (informativo ou pior), <em>atenção ou pior</em> ou <em>só críticos</em>.</li>
+  <li><strong>Tipos de evento:</strong> nenhum marcado significa <em>todos</em>.</li>
+  <li><strong>Dispositivo:</strong> todos, ou só um.</li>
+  <li><strong>Avisar também da recuperação:</strong> “voltou” é informativo, então, com esta opção ligada, ele segue o filtro de <em>tipo</em> e de <em>dispositivo</em> em vez do de gravidade. Sem isso, uma regra “atenção ou pior” avisaria da queda e nunca da volta.</li>
+</ul>
+<div class="tip"><p><strong>Receita comum:</strong> um canal para o plantão, com uma regra “atenção ou pior” e recuperação ligada; outro canal de baixa prioridade com tudo (“qualquer”), para consulta posterior.</p></div>
+<p>Um canal com duas regras que casam com o mesmo evento recebe <strong>uma</strong> mensagem só.</p>
+
+<h3>Confiabilidade e anti-ruído</h3>
+<ul>
+  <li>O envio é <strong>assíncrono</strong>: não atrasa a checagem que gerou o evento.</li>
+  <li>Até <strong>3 tentativas</strong> para falha de rede, resposta 5xx ou 429. Erros de configuração (4xx, senha recusada) não são repetidos.</li>
+  <li>A <strong>mesma mensagem</strong> não vai duas vezes ao mesmo canal dentro de uma janela (60 s por padrão; ajustável).</li>
+  <li>No máximo <strong>30 mensagens por minuto</strong> por canal; o excedente é registrado como <em>suprimido</em>.</li>
+  <li>O <a href="administracao.html#modo-de-manutencao">modo de manutenção</a> suspende todas as notificações.</li>
+</ul>
+<h3>Histórico de envios</h3>
+<p>Cada resultado final fica no histórico (30 dias): <em>enviada</em>, <em>falhou</em> (com o motivo), <em>suprimida</em> ou <em>teste</em>. É o primeiro lugar para olhar quando um alerta “não chegou”.</p>
+
+<h3 id="webhook">Webhook</h3>
+<p>O OmniDude faz um <code>POST</code> com um JSON como este:</p>
+<pre><code>{
+  "source": "omnidude",
+  "eventId": 42,
+  "ts": 1793147934,
+  "severity": "CRITICAL",
+  "type": "DEVICE_DOWN",
+  "deviceId": 12,
+  "deviceName": "firewall-borda",
+  "message": "firewall-borda (192.0.2.10) está inacessível"
+}</code></pre>
+<p>Se o canal tem <strong>segredo</strong>, o corpo é assinado com HMAC-SHA256 e a assinatura vai no cabeçalho <code>X-OmniDude-Signature: sha256=&lt;hex&gt;</code>. Para validar no receptor (Python):</p>
+<pre><code>import hmac, hashlib
+
+def valido(corpo: bytes, cabecalho: str, segredo: str) -&gt; bool:
+    esperado = "sha256=" + hmac.new(segredo.encode(), corpo, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(esperado, cabecalho)</code></pre>
+<div class="note"><p>Calcule a assinatura sobre o corpo <strong>exatamente como recebido</strong>, antes de decodificar o JSON. Responda com 2xx; outros status contam como falha.</p></div>
+<div class="note"><p>Telegram e e-mail foram testados contra servidores locais simulados (HTTP e SMTP), não contra a API real do Telegram nem um provedor SMTP; STARTTLS e SSL não foram exercitados. Use <span class="ui">Testar</span> para validar o seu.</p></div>

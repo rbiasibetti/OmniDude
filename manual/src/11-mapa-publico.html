@@ -1,0 +1,52 @@
+---
+title: Mapa público
+group: Usando
+desc: Publicar um mapa para qualquer pessoa ver, sem login, em modo somente leitura e sem detalhes dos dispositivos.
+---
+<h2>O que é</h2>
+<p><span class="ui">Publicar</span>, na barra do mapa <span class="tag admin">ADMIN</span>, gera um link como <code>/public/&lt;token&gt;</code>. Quem abrir esse link, <strong>sem login</strong>, vê o mapa numa página própria: só as formas, os enlaces e, conforme as opções, os nomes e o estado. Nada de menu, inspetor, Dashboard ou eventos, e nenhum dispositivo é clicável.</p>
+{{img:mapa-publico.jpg|A página pública: só topologia, nomes e estado (normal, atenção, fora do ar, sem informação).|wide}}
+
+<h2>Publicar</h2>
+<ol class="steps">
+  <li>Abra o mapa e clique em <span class="ui">Publicar</span>.</li>
+  <li>Escolha as opções: <strong>mostrar os nomes</strong> e <strong>mostrar o estado</strong>.</li>
+  <li>Copie o link (<span class="ui">Copiar</span>) ou abra-o (<span class="ui">Abrir</span>).</li>
+</ol>
+{{img:form-publicar.jpg|O diálogo de publicação: opções, link público e ações.}}
+<table>
+  <thead><tr><th>Opção</th><th>Desligada</th></tr></thead>
+  <tbody>
+    <tr><td>Mostrar o nome dos dispositivos</td><td>Cada nó mostra só o tipo (Switch, Servidor…).</td></tr>
+    <tr><td>Mostrar o estado (UP, atenção, DOWN)</td><td>O mapa mostra só a topologia.</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><span class="ui">Gerar novo link</span> troca o endereço: o antigo deixa de funcionar e nunca volta.</li>
+  <li><span class="ui">Despublicar</span> apaga o endereço.</li>
+</ul>
+
+<h2>O que sai e o que não sai</h2>
+<p>A visão pública é montada <strong>no servidor</strong> com uma lista fixa de campos. Não é a interface normal com coisas escondidas: os dados sensíveis <em>não existem</em> na resposta.</p>
+<div class="grid2">
+  <div><h4 class="ok">Sai</h4><p>Id público (<code>n0</code>, <code>n1</code>…), nome (se permitido), tipo, estado (se permitido), posição, se é nó lógico; nos enlaces: origem, destino, tipo e “com falha”.</p></div>
+  <div><h4 class="bad">Nunca sai</h4><p>IPs, MACs, fabricante, interfaces, tráfego, serviços, notas, rótulos, evidências, ids internos e sugestões de enlace. Nós deduzidos aparecem como “Switch/hub não gerenciável”, sem o nome do equipamento nem da porta.</p></div>
+</div>
+
+<h2>Segurança do link</h2>
+<ul>
+  <li><strong>O link é a credencial:</strong> 256 bits aleatórios, sem enumeração. Um token inexistente, malformado ou despublicado dá o mesmo 404.</li>
+  <li>Só <strong>ADMIN</strong> vê ou muda a publicação.</li>
+  <li>Só <code>GET</code>, sem cookies nem sessão; <code>Cache-Control: no-store</code>, <code>X-Robots-Tag: noindex</code>, <code>Referrer-Policy: no-referrer</code> e uma CSP restrita.</li>
+  <li>Limite de <strong>120 requisições por minuto</strong> por origem.</li>
+  <li>O resto do aplicativo (inclusive o SSE e os arquivos da interface) continua exigindo login. A página não pode ser embutida em <code>iframe</code>.</li>
+  <li>A página <strong>atualiza sozinha</strong> a cada 30 s.</li>
+</ul>
+<div class="warn"><p>Quem tiver o link vê o mapa, e o link pode ser repassado. Se suspeitar de vazamento, use <span class="ui">Gerar novo link</span> ou <span class="ui">Despublicar</span>.</p></div>
+
+<h2>Disponibilizar para a Internet</h2>
+<p>O OmniDude escuta só em <code>127.0.0.1</code> por padrão, então o link só abre na própria máquina. Para publicar fora, ponha um <a href="instalacao.html#acessar-de-outras-maquinas-https">proxy reverso com HTTPS</a> na frente e exponha <strong>apenas</strong> <code>/public/</code> e <code>/api/public/</code>; o resto não precisa sair.</p>
+<pre><code>location /public/     { proxy_pass http://127.0.0.1:8080; }
+location /api/public/ { proxy_pass http://127.0.0.1:8080; }
+# nenhuma outra rota é exposta</code></pre>
+<p>Atrás do proxy, o limite de taxa enxerga o IP do proxy, a menos que você configure <code>OMNIDUDE_FORWARD_HEADERS=native</code> (veja <a href="seguranca.html">Segurança</a>).</p>

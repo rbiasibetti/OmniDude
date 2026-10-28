@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] { display: none !important; }
+
+/* uPlot no tema escuro */
+.u-legend { color: #cbd5e1; font-size: 11px; text-align: left; }
+.u-legend .u-marker { border-radius: 2px; }
+.u-select { background: rgba(56, 189, 248, 0.15); }

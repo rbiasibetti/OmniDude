@@ -1,0 +1,14 @@
+<svg viewBox="0 0 900 250" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" class="d-arrow"/></marker></defs>
+  <rect class="d-box up" x="40" y="80" width="170" height="80" rx="40"/><text class="d-t b c" x="125" y="115">UP</text><text class="d-t s c" x="125" y="135">respondendo</text>
+  <rect class="d-box down" x="690" y="80" width="170" height="80" rx="40"/><text class="d-t b c" x="775" y="115">DOWN</text><text class="d-t s c" x="775" y="135">fora do ar</text>
+  <rect class="d-box warn" x="365" y="170" width="170" height="64" rx="32"/><text class="d-t b c" x="450" y="198">ATENÇÃO</text><text class="d-t s c" x="450" y="216">responde, mas lento</text>
+  <path class="d-line" d="M210 105C350 55 550 55 690 105" marker-end="url(#a2)"/>
+  <text class="d-t c" x="450" y="52">N falhas seguidas (padrão 3)</text>
+  <path class="d-line" d="M690 135C550 185 550 185 560 160" opacity="0"/>
+  <path class="d-line" d="M690 140C560 130 340 130 210 140" marker-end="url(#a2)"/>
+  <text class="d-t c" x="450" y="124">M sucessos seguidos (padrão 1)</text>
+  <path class="d-line dash" d="M170 160C230 190 300 200 365 200" marker-end="url(#a2)"/>
+  <text class="d-t s c" x="258" y="222">resposta acima do limite de latência</text>
+  <path class="d-line dash" d="M535 200C600 200 640 190 690 150" marker-end="url(#a2)"/>
+</svg>

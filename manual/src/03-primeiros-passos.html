@@ -1,0 +1,76 @@
+---
+title: Primeiros passos
+group: Começando
+desc: Entre no sistema, conheça as áreas da interface e siga o caminho de uma rede vazia a uma rede monitorada.
+---
+<h2>Entrar</h2>
+<p>Abra o endereço do servidor (<code>http://127.0.0.1:8080</code> na própria máquina) e entre com o usuário e a senha.</p>
+{{img:login.jpg|A tela de login.}}
+<p>Se a senha for provisória (a gerada no primeiro acesso, ou a de um usuário recém-criado), o sistema pede uma nova antes de continuar. A senha precisa ter ao menos 10 caracteres.</p>
+{{img:primeiro-acesso.jpg|A troca obrigatória da senha provisória.}}
+<div class="note"><p>Após <strong>5 tentativas erradas</strong> para o mesmo usuário vindas do mesmo endereço, esse par fica bloqueado por 5 minutos. O bloqueio é por usuário <em>e</em> origem, então um terceiro não consegue trancar a sua conta de outro lugar.</p></div>
+
+<h2>Conhecer a interface</h2>
+<figure class="figure wide"><div class="annotated">
+<img src="img/manual/inspetor-switch.jpg" alt="A interface com o mapa e o inspetor de um switch aberto." loading="lazy">
+<span class="dot" style="left:20.5%;top:-14px">1</span>
+<span class="dot" style="left:69%;top:-14px">2</span>
+<span class="dot" style="left:92%;top:-14px">3</span>
+<span class="dot" style="left:-6px;top:12%">4</span>
+<span class="dot" style="left:14.4%;top:8.6%">5</span>
+<span class="dot" style="left:20%;top:33.6%">6</span>
+<span class="dot" style="left:86.8%;top:6.3%">7</span>
+<span class="dot" style="left:60%;top:93%">8</span>
+</div><figcaption>As áreas da interface, com o inspetor do switch <code>core-sw</code> aberto à direita.</figcaption></figure>
+<ol class="legend">
+  <li><strong>Resumo e conexão.</strong> Contagem de dispositivos UP, em atenção e DOWN, e o estado do canal em tempo real.</li>
+  <li><strong>Busca.</strong> Encontra por IP, nome, MAC ou fabricante e centraliza o dispositivo no mapa (<kbd>Enter</kbd>).</li>
+  <li><strong>Usuário.</strong> Quem está logado e o botão <span class="ui">Sair</span>.</li>
+  <li><strong>Menu.</strong> Dashboard, Mapa, Dispositivos, Descoberta, Eventos e (só ADMIN) Configurações.</li>
+  <li><strong>Barra do mapa.</strong> Escolha do mapa, <span class="ui">+ Dispositivo</span>, <span class="ui">+ Enlace</span>, <span class="ui">Detectar enlaces</span>, <span class="ui">Publicar</span>, <span class="ui">Organizar</span>, <span class="ui">Enquadrar</span>.</li>
+  <li><strong>Mapa.</strong> Os dispositivos e enlaces. Arraste, clique e use a roda para aproximar.</li>
+  <li><strong>Inspetor.</strong> Abre ao clicar num nó: serviços, identidade, interfaces e gráficos.</li>
+  <li><strong>Faixa de eventos.</strong> Os eventos mais recentes, sempre visíveis.</li>
+</ol>
+<p>Em telas estreitas o menu vira uma barra horizontal e o inspetor ocupa a tela toda.</p>
+<div class="grid2">
+  <div>{{img:mobile-mapa.jpg|O mapa no celular.}}</div>
+  <div>{{img:mobile-dashboard.jpg|O Dashboard no celular.}}</div>
+</div>
+
+<h2>De zero a uma rede monitorada</h2>
+<ol class="steps">
+  <li><strong>Cadastre um perfil SNMP</strong> (se os equipamentos tiverem SNMP). No formulário de dispositivo, <span class="ui">Perfis…</span> abre o gerenciador. Veja <a href="snmp-trafego.html#perfis-snmp">Perfis SNMP</a>.</li>
+  <li><strong>Rode a descoberta.</strong> Em <em>Descoberta</em>, informe a faixa (por exemplo <code>192.168.1.0/24</code>), marque a confirmação de autorização, escolha o perfil e clique em <span class="ui">Iniciar varredura</span>. Revise e importe. Veja <a href="descoberta.html">Descoberta de rede</a>.</li>
+  <li><strong>Ou cadastre à mão</strong>: <em>Mapa → + Dispositivo</em> (<a href="mapa.html">Mapa e dispositivos</a>).</li>
+  <li><strong>Leia as interfaces.</strong> Selecione um equipamento SNMP e use <span class="ui">Ler via SNMP</span> no inspetor.</li>
+  <li><strong>Detecte os enlaces.</strong> <span class="ui">Detectar enlaces</span> propõe as ligações; confirme as corretas (<a href="topologia.html">Topologia</a>).</li>
+  <li><strong>Marque <span class="ui">monitorar</span></strong> nas interfaces cujo tráfego você quer ver. A primeira taxa aparece na segunda leitura, cerca de 1 minuto depois.</li>
+  <li><strong>Configure os alertas</strong> em <em>Configurações → Notificações</em> (<a href="eventos-notificacoes.html">Eventos e notificações</a>).</li>
+</ol>
+
+<h2>Áreas do menu</h2>
+<h3>Dashboard</h3>
+<p>Visão geral para consultar de relance: contagem por estado, <em>problemas ativos</em>, as <em>maiores latências</em> dos últimos 15 minutos e os últimos eventos.</p>
+{{img:dashboard.jpg|O Dashboard.}}
+
+<h3>Mapa</h3>
+<p>A área principal. Veja o <a href="mapa.html">capítulo 4</a>.</p>
+
+<h3>Dispositivos</h3>
+<p>Uma lista com nome, IP, tipo, fabricante, estado e há quanto tempo está nele. A lista inclui nós lógicos e deduzidos. É a melhor visão para conferir o inventário.</p>
+{{img:dispositivos.jpg|A lista de dispositivos.}}
+
+<h3>Descoberta e Eventos</h3>
+<p>A <a href="descoberta.html">descoberta</a> varre faixas de rede; <a href="eventos-notificacoes.html">Eventos</a> lista o que mudou, com filtro por gravidade e confirmação (<em>ack</em>). O contador vermelho ao lado de <em>Eventos</em> mostra os não confirmados.</p>
+
+<h2>Atalhos e dicas</h2>
+<table>
+  <thead><tr><th>Ação</th><th>Como</th></tr></thead>
+  <tbody>
+    <tr><td>Localizar um dispositivo</td><td>Digite na busca do topo e tecle <kbd>Enter</kbd>.</td></tr>
+    <tr><td>Aproximar ou afastar o mapa</td><td>Roda do mouse ou gesto de pinça; <span class="ui">⌂ Enquadrar</span> mostra tudo.</td></tr>
+    <tr><td>Fechar o inspetor</td><td>O <kbd>×</kbd> no canto, ou clique no fundo do mapa.</td></tr>
+    <tr><td>Cancelar o modo de enlace</td><td><kbd>Esc</kbd>.</td></tr>
+  </tbody>
+</table>

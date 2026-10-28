@@ -1,0 +1,28 @@
+/* Página pública do mapa: tema escuro, sem dependências, compatível com CSP (sem estilos inline). */
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column;
+  background: #020617; color: #e2e8f0;
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px;
+  padding: 10px 16px; border-bottom: 1px solid #1e293b; background: #0f172a;
+}
+h1 { margin: 0; font-size: 16px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: #94a3b8; font-size: 12px; }
+.legend[hidden] { display: none; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: baseline; }
+.dot.up { background: #22c55e; } .dot.warn { background: #f59e0b; }
+.dot.down { background: #ef4444; } .dot.unknown { background: #94a3b8; }
+.updated { margin-left: auto; color: #64748b; font-size: 12px; }
+main { position: relative; flex: 1; min-height: 0; }
+#cy { position: absolute; inset: 0; }
+.message {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 24px; text-align: center; color: #94a3b8; font-size: 16px;
+}
+.message[hidden] { display: none; }
+@media (max-width: 600px) { .updated { margin-left: 0; width: 100%; } }

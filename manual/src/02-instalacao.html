@@ -1,0 +1,111 @@
+---
+title: Instalação
+group: Começando
+desc: Requisitos, como compilar e executar o jar, instalar como serviço systemd e expor a interface com HTTPS.
+---
+<h2>Requisitos</h2>
+<ul>
+  <li><strong>Java 21</strong>: JDK para compilar, JRE para executar.</li>
+  <li><strong>Maven 3.9</strong> ou superior, só para compilar.</li>
+  <li>O utilitário <code>ping</code> no <code>PATH</code>. As checagens ICMP chamam o <code>ping</code> do sistema operacional.</li>
+  <li>Linux, macOS ou Windows. O ICMP só foi validado em Linux.</li>
+  <li>Um navegador moderno. Nenhum plugin nem acesso à Internet é necessário: todas as bibliotecas da interface vêm no próprio jar.</li>
+</ul>
+
+<h2>Compilar e executar</h2>
+<pre><code>git clone &lt;url-do-repositório&gt; omnidude
+cd omnidude
+mvn clean package
+java -jar target/omnidude-0.1.0-SNAPSHOT.jar</code></pre>
+<p>Abra <code>http://127.0.0.1:8080</code>. O banco e a chave de criptografia são criados na pasta <code>./data</code> (mude com <code>OMNIDUDE_DATA_DIR</code>).</p>
+
+<h3>Primeiro acesso</h3>
+<p>O usuário inicial é <code>admin</code>. Há dois modos de saber a senha:</p>
+<ul>
+  <li><strong>Gerada:</strong> uma senha aleatória aparece <strong>uma única vez</strong> no log de inicialização, num bloco “Primeiro acesso”. O sistema exige trocá-la no primeiro login.</li>
+  <li><strong>Definida por você:</strong> inicie com <code>OMNIDUDE_ADMIN_PASSWORD</code>. Útil em laboratório e automação; neste caso a troca não é exigida.</li>
+</ul>
+<pre><code>OMNIDUDE_ADMIN_PASSWORD='uma-senha-forte' java -jar target/omnidude-0.1.0-SNAPSHOT.jar</code></pre>
+<div class="note"><p>A variável só vale na criação do usuário (banco vazio). Depois disso, a senha é trocada pela interface ou por <em>Configurações → Usuários</em>.</p></div>
+
+<h3>Variáveis de ambiente principais</h3>
+<table>
+  <thead><tr><th>Variável</th><th>Padrão</th><th>Função</th></tr></thead>
+  <tbody>
+    <tr><td><code>OMNIDUDE_DATA_DIR</code></td><td><code>./data</code></td><td>Onde ficam <code>omnidude.db</code> e <code>secret.key</code>. Faça backup dos dois.</td></tr>
+    <tr><td><code>OMNIDUDE_BIND</code></td><td><code>127.0.0.1</code></td><td>Endereço de escuta. Para sair da máquina, use proxy com HTTPS.</td></tr>
+    <tr><td><code>OMNIDUDE_PORT</code></td><td><code>8080</code></td><td>Porta HTTP.</td></tr>
+    <tr><td><code>OMNIDUDE_ADMIN_PASSWORD</code></td><td>aleatória</td><td>Senha inicial do <code>admin</code>.</td></tr>
+    <tr><td><code>OMNIDUDE_SECRET_KEY</code></td><td>arquivo</td><td>Chave AES-256 em base64. Sem ela, é gerada em <code>secret.key</code>.</td></tr>
+  </tbody>
+</table>
+<p>A lista completa, com as variáveis de proxy e as propriedades <code>omnidude.*</code>, está em <a href="referencia.html">Referência</a>.</p>
+
+<div class="warn"><p><strong>Guarde a chave.</strong> As credenciais SNMP e dos canais de notificação ficam cifradas no banco com a chave de <code>secret.key</code> (ou <code>OMNIDUDE_SECRET_KEY</code>). O backup do banco <em>não</em> inclui a chave: sem ela, esses segredos ficam ilegíveis.</p></div>
+
+<h2>Instalar como serviço (systemd)</h2>
+<p>Em um servidor Linux, use a unidade pronta da pasta <code>packaging/</code>. Ela roda o OmniDude como o usuário sem privilégios <code>omnidude</code>, com o sistema de arquivos somente leitura (exceto <code>/var/lib/omnidude</code>) e só a capacidade <code>CAP_NET_RAW</code>, usada pelo <code>ping</code>. A análise <code>systemd-analyze security</code> dá exposição 1,7 (OK).</p>
+<ol class="steps">
+  <li><strong>Instale o Java 21 e o ping.</strong>
+    <pre><code>sudo apt install openjdk-21-jre-headless iputils-ping</code></pre></li>
+  <li><strong>Compile o jar</strong> (<code>mvn clean package</code>).</li>
+  <li><strong>Rode o instalador</strong> como root. Ele é idempotente: pode ser repetido.
+    <pre><code>sudo ./packaging/install.sh --start</code></pre></li>
+  <li><strong>Acompanhe o log</strong>. Se você não definiu a senha, ela aparece aqui.
+    <pre><code>journalctl -u omnidude -f</code></pre></li>
+</ol>
+<table>
+  <thead><tr><th>Caminho</th><th>Conteúdo</th><th>Dono / modo</th></tr></thead>
+  <tbody>
+    <tr><td><code>/opt/omnidude/omnidude.jar</code></td><td>aplicação</td><td>root, 644</td></tr>
+    <tr><td><code>/etc/omnidude/omnidude.env</code></td><td>configuração e segredos (<code>OMNIDUDE_*</code>, <code>JAVA_OPTS</code>)</td><td>root, 600</td></tr>
+    <tr><td><code>/var/lib/omnidude/</code></td><td>banco, <code>secret.key</code>, backups</td><td>omnidude, 700</td></tr>
+    <tr><td>logs</td><td>journal do systemd</td><td><code>journalctl -u omnidude</code></td></tr>
+  </tbody>
+</table>
+<h3>Atualizar e remover</h3>
+<pre><code># atualizar: compile o jar novo e rode o instalador de novo
+mvn clean package &amp;&amp; sudo ./packaging/install.sh
+
+# remover o serviço, mantendo dados e configuração
+sudo ./packaging/uninstall.sh
+
+# remover TUDO (inclui banco e chave; espera 5 s)
+sudo ./packaging/uninstall.sh --purge</code></pre>
+<p>As migrações do banco rodam sozinhas na partida; configuração e dados não são tocados na atualização.</p>
+<div class="note"><p><strong>Ping sob o isolamento.</strong> A unidade concede <code>CAP_NET_RAW</code> ao serviço. Se o ping ainda falhar, libere o ICMP sem <em>raw socket</em>: <code>echo 'net.ipv4.ping_group_range = 0 2147483647' | sudo tee /etc/sysctl.d/90-ping.conf &amp;&amp; sudo sysctl --system</code>. Para testar como o serviço enxerga: <code>sudo -u omnidude ping -c1 192.168.0.1</code>.</p></div>
+<div class="note"><p>A unidade e os scripts foram validados com <code>systemd-analyze verify</code> e por testes automatizados, mas a instalação como root em um servidor real ainda não foi exercitada. Faça um teste de fumaça: <code>systemctl status omnidude</code>, abra a interface, crie um dispositivo e confira o ping.</p></div>
+
+<h2>Acessar de outras máquinas (HTTPS)</h2>
+<p>Por padrão o OmniDude escuta só em <code>127.0.0.1</code>. Para usá-lo pela rede, mantenha esse padrão e ponha um <strong>proxy reverso com TLS</strong> (nginx, Caddy, Apache) na mesma máquina. Em <code>/etc/omnidude/omnidude.env</code>:</p>
+<pre><code>OMNIDUDE_FORWARD_HEADERS=native
+OMNIDUDE_COOKIE_SECURE=true</code></pre>
+<p>Exemplo para o nginx. O proxy deve <strong>substituir</strong> os cabeçalhos <code>X-Forwarded-*</code> e desligar o <em>buffering</em> do canal de eventos em tempo real (<code>/api/stream</code>):</p>
+<pre><code>server {
+    listen 443 ssl;
+    server_name omnidude.exemplo.com;
+    # ssl_certificate / ssl_certificate_key ...
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /api/stream {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+}</code></pre>
+<ul>
+  <li>Se o proxy estiver em <strong>outra</strong> máquina, defina <code>OMNIDUDE_TRUSTED_PROXIES</code> com o IP dele (expressão regular, por exemplo <code>10\.0\.0\.5</code>).</li>
+  <li><strong>Não use</strong> <code>OMNIDUDE_FORWARD_HEADERS=framework</code>: ele confia em qualquer origem e permite falsificar o IP do cliente.</li>
+</ul>
+<p>Veja o <a href="seguranca.html">capítulo de segurança</a> para o restante das recomendações.</p>
+
+<h2>Contêineres</h2>
+<p>Ainda não há Dockerfile oficial: ele está no roteiro. Enquanto isso, o jar roda em qualquer imagem com Java 21; lembre-se de montar um volume em <code>OMNIDUDE_DATA_DIR</code> e de que o ICMP precisa do <code>ping</code> e da capacidade <code>NET_RAW</code> dentro do contêiner.</p>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solução de problemas · Manual do OmniDude</title>
+<meta name="description" content="Sintomas comuns, causas prováveis e o que fazer: ping, SNMP, enlaces, taxas de tráfego, alertas que não chegam, login e recuperação de acesso.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a class="current" aria-current="page" href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Referência · capítulo 15</p><h1>Solução de problemas</h1><p class="lead">Sintomas comuns, causas prováveis e o que fazer: ping, SNMP, enlaces, taxas de tráfego, alertas que não chegam, login e recuperação de acesso.</p></header>
+<article class="prose">
+<p>Quando algo não se comporta como esperado, comece pelo log (<code>journalctl -u omnidude -f</code> no systemd, ou o terminal onde o jar roda) e pelo <strong>histórico de envios</strong> (<em>Configurações → Notificações</em>).</p>
+
+<h2 id="monitoramento">Monitoramento<a class="anchor" href="#monitoramento" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+  <tbody>
+    <tr><td>Todos os pings falham, mas os equipamentos estão no ar</td><td>O processo não consegue chamar o <code>ping</code> (não instalado ou sem a capacidade <code>NET_RAW</code>).</td><td>Instale <code>iputils-ping</code>. No systemd, teste <code>sudo -u omnidude ping -c1 &lt;ip&gt;</code>; se falhar, aplique <code>net.ipv4.ping_group_range</code> (<a href="instalacao.html">Instalação</a>).</td></tr>
+    <tr><td>Um dispositivo está DOWN, mas responde a outros testes</td><td>O firewall dele bloqueia ICMP.</td><td>Exclua o Ping e use TCP ou SNMP como serviço; sem âncora ICMP, o estado vem dos serviços e do SNMP.</td></tr>
+    <tr><td>O estado oscila entre UP e DOWN</td><td>Perda de pacotes ocasional (Wi-Fi, WAN) com poucas falhas para DOWN.</td><td>Aumente <em>Falhas p/ DOWN</em> e/ou o timeout do serviço.</td></tr>
+    <tr><td>O dispositivo ficou DOWN e depois o IP mudou</td><td>DHCP.</td><td>Veja <a href="identidade.html">Identidade e DHCP</a>; use <span class="ui">Procurar novo IP</span> ou reserve o IP no DHCP.</td></tr>
+    <tr><td>Serviço HTTP falha com 3xx ou 4xx</td><td>A checagem não segue redirecionamentos e aceita <code>200-399</code>.</td><td>Aponte o caminho final, ajuste <em>Status aceitos</em>, ou use o método <code>HEAD</code>.</td></tr>
+    <tr><td>HTTPS falha por certificado</td><td>Certificado interno ou autoassinado.</td><td>Desmarque <em>Verificar o certificado TLS</em> (sabendo o que isso significa).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="snmp-e-trafego">SNMP e tráfego<a class="anchor" href="#snmp-e-trafego" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">Ler via SNMP</span> dá timeout</td><td>Community ou usuário errado, porta diferente, ACL no equipamento, ou SNMP desligado.</td><td>Teste de outra máquina: <code>snmpget -v2c -c &lt;community&gt; &lt;ip&gt; 1.3.6.1.2.1.1.1.0</code>. Confira o perfil e a porta; libere o IP do OmniDude na ACL do equipamento.</td></tr>
+    <tr><td>SNMPv3 falha com “senha curta”</td><td>As senhas precisam de 8 ou mais caracteres.</td><td>Use senhas de 8 ou mais caracteres; confira também o protocolo de autenticação (SHA, SHA-256, SHA-512) e o de criptografia (AES).</td></tr>
+    <tr><td>As taxas não aparecem</td><td>A primeira leitura só grava o contador. A interface pode não estar marcada para monitorar.</td><td>Marque <span class="ui">monitorar</span> e espere uma ou duas leituras (cerca de 1 a 2 minutos).</td></tr>
+    <tr><td>Taxa ausente em enlace rápido</td><td>Contador de 32 bits: pode ter dado mais de uma volta no intervalo.</td><td>Use equipamentos com contadores de 64 bits. Reduza o intervalo da coleta de tráfego, se necessário.</td></tr>
+    <tr><td>As credenciais SNMP “sumiram” depois de restaurar um backup</td><td>A chave de criptografia é outra.</td><td>Restaure com a <strong>mesma</strong> <code>secret.key</code> (ou <code>OMNIDUDE_SECRET_KEY</code>).</td></tr>
+  </tbody>
+</table>
+
+<h2 id="topologia-e-descoberta">Topologia e descoberta<a class="anchor" href="#topologia-e-descoberta" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+  <tbody>
+    <tr><td><span class="ui">Detectar enlaces</span> não sugere nada</td><td>Os equipamentos não têm perfil SNMP, ou não anunciam LLDP/CDP/MNDP nem expõem a FDB.</td><td>Associe perfis, rode <span class="ui">Ler via SNMP</span>, ative LLDP no equipamento. Cisco com FDB por VLAN (<code>community@vlan</code>) não é lida. Crie os enlaces à mão se preciso.</td></tr>
+    <tr><td>A descoberta recusa a faixa</td><td>Faixa pública, ou maior que o limite.</td><td>Use uma faixa privada. Faixa pública exige <code>omnidude.discovery.allow-public=true</code>; acima de 4.096 endereços pede confirmação; o teto é 65.536.</td></tr>
+    <tr><td>A descoberta não mostra o fabricante</td><td>O MAC só é conhecido na mesma rede local do servidor.</td><td>Rode <span class="ui">Ler via SNMP</span> no roteador (traz o ARP) ou rode o OmniDude numa máquina da mesma sub-rede.</td></tr>
+    <tr><td>Há nós “Switch/hub não gerenciável” demais</td><td>Vários MACs vistos numa porta sem vizinho que os explique.</td><td>É esperado para hubs, switches simples e APs sem SNMP. Confira o enlace e renomeie ou descarte.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="notificacoes">Notificações<a class="anchor" href="#notificacoes" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+  <tbody>
+    <tr><td>O alerta não chegou</td><td>Regra que não casa, canal desligado, modo de manutenção ou anti-repetição.</td><td>Veja o <strong>histórico de envios</strong>: ele diz <em>enviada</em>, <em>falhou</em> (e por quê) ou <em>suprimida</em>. Confira o <a href="administracao.html#modo-de-manutencao">modo de manutenção</a>.</td></tr>
+    <tr><td>Histórico: “falha de rede ao chamar o webhook”</td><td>O endereço não é alcançável pelo servidor.</td><td>Teste <code>curl -v &lt;url&gt;</code> da máquina do OmniDude; confira DNS, firewall e a porta.</td></tr>
+    <tr><td>Recebi a queda, mas não a recuperação</td><td>A regra usa gravidade e a opção de recuperação está desligada.</td><td>Ligue <em>Avisar também da recuperação</em> na regra.</td></tr>
+    <tr><td>E-mail recusado</td><td>Porta/segurança erradas, ou autenticação exigida.</td><td>STARTTLS é na 587, SSL/TLS na 465, sem segurança na 25; informe usuário e senha.</td></tr>
+    <tr><td>Muitas mensagens iguais</td><td>—</td><td>O anti-repetição (60 s) e o limite de 30 por minuto já protegem; aumente a janela em <em>Ajustes</em> ou use as falhas para DOWN do serviço.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="acesso-e-conta">Acesso e conta<a class="anchor" href="#acesso-e-conta" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Sintoma</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+  <tbody>
+    <tr><td>O login recusa a senha certa, com o aviso de bloqueio por 5 minutos</td><td>Houve 5 senhas erradas para o usuário, vindas do mesmo endereço.</td><td>Aguarde 5 minutos.</td></tr>
+    <tr><td>Não achei a senha inicial</td><td>Ela é exibida uma única vez, no log do primeiro início.</td><td>Procure o bloco “Primeiro acesso” em <code>journalctl -u omnidude | grep -A1 "Primeiro acesso"</code>. Se o log foi perdido, veja “Perdi o acesso do administrador”.</td></tr>
+    <tr><td>Erro 403 ao salvar</td><td>Token CSRF vencido, ou perfil VIEWER.</td><td>Recarregue a página; na API, renove com <code>GET /api/me</code>. VIEWER não altera nada.</td></tr>
+    <tr><td>O mapa não atualiza em tempo real atrás de um proxy</td><td>O proxy faz <em>buffering</em> do SSE.</td><td>Desligue o <em>buffering</em> para <code>/api/stream</code> (<a href="instalacao.html">exemplo</a>).</td></tr>
+    <tr><td>A interface pede login o tempo todo atrás do proxy</td><td><code>OMNIDUDE_COOKIE_SECURE=true</code> com o acesso por HTTP, ou o proxy sem <code>X-Forwarded-Proto</code>.</td><td>Acesse por HTTPS; confira os cabeçalhos do proxy e <code>OMNIDUDE_FORWARD_HEADERS=native</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3 id="perdi-o-acesso-do-administrador">Perdi o acesso do administrador<a class="anchor" href="#perdi-o-acesso-do-administrador" aria-label="Link para esta seção">#</a></h3>
+<p>Se <strong>nenhum</strong> administrador consegue entrar, o OmniDude recria o <code>admin</code> quando a tabela de usuários está vazia. Faça antes um backup do <code>omnidude.db</code>.</p>
+<pre><code>sudo systemctl stop omnidude
+sudo -u omnidude cp /var/lib/omnidude/omnidude.db /var/lib/omnidude/omnidude.db.bak
+sudo -u omnidude sqlite3 /var/lib/omnidude/omnidude.db "DELETE FROM users;"
+# opcional: defina a senha inicial em /etc/omnidude/omnidude.env (OMNIDUDE_ADMIN_PASSWORD=...)
+sudo systemctl start omnidude
+journalctl -u omnidude | grep -A1 "Primeiro acesso"</code></pre>
+<div class="warn"><p>Isso apaga <strong>todos</strong> os usuários; recrie os demais depois. Os eventos já confirmados continuam, apenas perdem a referência de quem os confirmou.</p></div>
+
+<h2 id="desempenho">Desempenho<a class="anchor" href="#desempenho" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li><strong>Pouca memória:</strong> o padrão do serviço é <code>-Xms128m -Xmx512m</code>. Aumente com <code>JAVA_OPTS</code> no <code>omnidude.env</code> se monitorar centenas de equipamentos.</li>
+  <li><strong>Muitos serviços:</strong> cada serviço é uma sonda por intervalo. Aumente o intervalo dos que não são críticos.</li>
+  <li><strong>Banco crescendo:</strong> reduza a retenção das amostras brutas em <em>Ajustes</em>.</li>
+</ul>
+<div class="note"><p>Não encontrou o seu caso? Reúna a versão, o trecho do log e os passos para reproduzir ao abrir uma issue. Para falhas de segurança, siga a orientação do <a href="seguranca.html#relatar-uma-vulnerabilidade">capítulo de segurança</a>.</p></div>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="api.html"><small>Anterior</small>API REST</a><a class="next" href="referencia.html"><small>Próximo</small>Referência e glossário</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#monitoramento">Monitoramento</a></li><li class="l2"><a href="#snmp-e-trafego">SNMP e tráfego</a></li><li class="l2"><a href="#topologia-e-descoberta">Topologia e descoberta</a></li><li class="l2"><a href="#notificacoes">Notificações</a></li><li class="l2"><a href="#acesso-e-conta">Acesso e conta</a></li><li class="l3"><a href="#perdi-o-acesso-do-administrador">Perdi o acesso do administrador</a></li><li class="l2"><a href="#desempenho">Desempenho</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

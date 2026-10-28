@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primeiros passos · Manual do OmniDude</title>
+<meta name="description" content="Entre no sistema, conheça as áreas da interface e siga o caminho de uma rede vazia a uma rede monitorada.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a class="current" aria-current="page" href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Começando · capítulo 03</p><h1>Primeiros passos</h1><p class="lead">Entre no sistema, conheça as áreas da interface e siga o caminho de uma rede vazia a uma rede monitorada.</p></header>
+<article class="prose">
+<h2 id="entrar">Entrar<a class="anchor" href="#entrar" aria-label="Link para esta seção">#</a></h2>
+<p>Abra o endereço do servidor (<code>http://127.0.0.1:8080</code> na própria máquina) e entre com o usuário e a senha.</p>
+<figure class="figure"><a class="zoom" href="img/manual/login.jpg" title="Clique para ampliar"><img src="img/manual/login.jpg" alt="A tela de login." loading="lazy"></a><figcaption>A tela de login.</figcaption></figure>
+<p>Se a senha for provisória (a gerada no primeiro acesso, ou a de um usuário recém-criado), o sistema pede uma nova antes de continuar. A senha precisa ter ao menos 10 caracteres.</p>
+<figure class="figure"><a class="zoom" href="img/manual/primeiro-acesso.jpg" title="Clique para ampliar"><img src="img/manual/primeiro-acesso.jpg" alt="A troca obrigatória da senha provisória." loading="lazy"></a><figcaption>A troca obrigatória da senha provisória.</figcaption></figure>
+<div class="note"><p>Após <strong>5 tentativas erradas</strong> para o mesmo usuário vindas do mesmo endereço, esse par fica bloqueado por 5 minutos. O bloqueio é por usuário <em>e</em> origem, então um terceiro não consegue trancar a sua conta de outro lugar.</p></div>
+
+<h2 id="conhecer-a-interface">Conhecer a interface<a class="anchor" href="#conhecer-a-interface" aria-label="Link para esta seção">#</a></h2>
+<figure class="figure wide"><div class="annotated">
+<img src="img/manual/inspetor-switch.jpg" alt="A interface com o mapa e o inspetor de um switch aberto." loading="lazy">
+<span class="dot" style="left:20.5%;top:-14px">1</span>
+<span class="dot" style="left:69%;top:-14px">2</span>
+<span class="dot" style="left:92%;top:-14px">3</span>
+<span class="dot" style="left:-6px;top:12%">4</span>
+<span class="dot" style="left:14.4%;top:8.6%">5</span>
+<span class="dot" style="left:20%;top:33.6%">6</span>
+<span class="dot" style="left:86.8%;top:6.3%">7</span>
+<span class="dot" style="left:60%;top:93%">8</span>
+</div><figcaption>As áreas da interface, com o inspetor do switch <code>core-sw</code> aberto à direita.</figcaption></figure>
+<ol class="legend">
+  <li><strong>Resumo e conexão.</strong> Contagem de dispositivos UP, em atenção e DOWN, e o estado do canal em tempo real.</li>
+  <li><strong>Busca.</strong> Encontra por IP, nome, MAC ou fabricante e centraliza o dispositivo no mapa (<kbd>Enter</kbd>).</li>
+  <li><strong>Usuário.</strong> Quem está logado e o botão <span class="ui">Sair</span>.</li>
+  <li><strong>Menu.</strong> Dashboard, Mapa, Dispositivos, Descoberta, Eventos e (só ADMIN) Configurações.</li>
+  <li><strong>Barra do mapa.</strong> Escolha do mapa, <span class="ui">+ Dispositivo</span>, <span class="ui">+ Enlace</span>, <span class="ui">Detectar enlaces</span>, <span class="ui">Publicar</span>, <span class="ui">Organizar</span>, <span class="ui">Enquadrar</span>.</li>
+  <li><strong>Mapa.</strong> Os dispositivos e enlaces. Arraste, clique e use a roda para aproximar.</li>
+  <li><strong>Inspetor.</strong> Abre ao clicar num nó: serviços, identidade, interfaces e gráficos.</li>
+  <li><strong>Faixa de eventos.</strong> Os eventos mais recentes, sempre visíveis.</li>
+</ol>
+<p>Em telas estreitas o menu vira uma barra horizontal e o inspetor ocupa a tela toda.</p>
+<div class="grid2">
+  <div><figure class="figure"><a class="zoom" href="img/manual/mobile-mapa.jpg" title="Clique para ampliar"><img src="img/manual/mobile-mapa.jpg" alt="O mapa no celular." loading="lazy"></a><figcaption>O mapa no celular.</figcaption></figure></div>
+  <div><figure class="figure"><a class="zoom" href="img/manual/mobile-dashboard.jpg" title="Clique para ampliar"><img src="img/manual/mobile-dashboard.jpg" alt="O Dashboard no celular." loading="lazy"></a><figcaption>O Dashboard no celular.</figcaption></figure></div>
+</div>
+
+<h2 id="de-zero-a-uma-rede-monitorada">De zero a uma rede monitorada<a class="anchor" href="#de-zero-a-uma-rede-monitorada" aria-label="Link para esta seção">#</a></h2>
+<ol class="steps">
+  <li><strong>Cadastre um perfil SNMP</strong> (se os equipamentos tiverem SNMP). No formulário de dispositivo, <span class="ui">Perfis…</span> abre o gerenciador. Veja <a href="snmp-trafego.html#perfis-snmp">Perfis SNMP</a>.</li>
+  <li><strong>Rode a descoberta.</strong> Em <em>Descoberta</em>, informe a faixa (por exemplo <code>192.168.1.0/24</code>), marque a confirmação de autorização, escolha o perfil e clique em <span class="ui">Iniciar varredura</span>. Revise e importe. Veja <a href="descoberta.html">Descoberta de rede</a>.</li>
+  <li><strong>Ou cadastre à mão</strong>: <em>Mapa → + Dispositivo</em> (<a href="mapa.html">Mapa e dispositivos</a>).</li>
+  <li><strong>Leia as interfaces.</strong> Selecione um equipamento SNMP e use <span class="ui">Ler via SNMP</span> no inspetor.</li>
+  <li><strong>Detecte os enlaces.</strong> <span class="ui">Detectar enlaces</span> propõe as ligações; confirme as corretas (<a href="topologia.html">Topologia</a>).</li>
+  <li><strong>Marque <span class="ui">monitorar</span></strong> nas interfaces cujo tráfego você quer ver. A primeira taxa aparece na segunda leitura, cerca de 1 minuto depois.</li>
+  <li><strong>Configure os alertas</strong> em <em>Configurações → Notificações</em> (<a href="eventos-notificacoes.html">Eventos e notificações</a>).</li>
+</ol>
+
+<h2 id="areas-do-menu">Áreas do menu<a class="anchor" href="#areas-do-menu" aria-label="Link para esta seção">#</a></h2>
+<h3 id="dashboard">Dashboard<a class="anchor" href="#dashboard" aria-label="Link para esta seção">#</a></h3>
+<p>Visão geral para consultar de relance: contagem por estado, <em>problemas ativos</em>, as <em>maiores latências</em> dos últimos 15 minutos e os últimos eventos.</p>
+<figure class="figure"><a class="zoom" href="img/manual/dashboard.jpg" title="Clique para ampliar"><img src="img/manual/dashboard.jpg" alt="O Dashboard." loading="lazy"></a><figcaption>O Dashboard.</figcaption></figure>
+
+<h3 id="mapa">Mapa<a class="anchor" href="#mapa" aria-label="Link para esta seção">#</a></h3>
+<p>A área principal. Veja o <a href="mapa.html">capítulo 4</a>.</p>
+
+<h3 id="dispositivos">Dispositivos<a class="anchor" href="#dispositivos" aria-label="Link para esta seção">#</a></h3>
+<p>Uma lista com nome, IP, tipo, fabricante, estado e há quanto tempo está nele. A lista inclui nós lógicos e deduzidos. É a melhor visão para conferir o inventário.</p>
+<figure class="figure"><a class="zoom" href="img/manual/dispositivos.jpg" title="Clique para ampliar"><img src="img/manual/dispositivos.jpg" alt="A lista de dispositivos." loading="lazy"></a><figcaption>A lista de dispositivos.</figcaption></figure>
+
+<h3 id="descoberta-e-eventos">Descoberta e Eventos<a class="anchor" href="#descoberta-e-eventos" aria-label="Link para esta seção">#</a></h3>
+<p>A <a href="descoberta.html">descoberta</a> varre faixas de rede; <a href="eventos-notificacoes.html">Eventos</a> lista o que mudou, com filtro por gravidade e confirmação (<em>ack</em>). O contador vermelho ao lado de <em>Eventos</em> mostra os não confirmados.</p>
+
+<h2 id="atalhos-e-dicas">Atalhos e dicas<a class="anchor" href="#atalhos-e-dicas" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Ação</th><th>Como</th></tr></thead>
+  <tbody>
+    <tr><td>Localizar um dispositivo</td><td>Digite na busca do topo e tecle <kbd>Enter</kbd>.</td></tr>
+    <tr><td>Aproximar ou afastar o mapa</td><td>Roda do mouse ou gesto de pinça; <span class="ui">⌂ Enquadrar</span> mostra tudo.</td></tr>
+    <tr><td>Fechar o inspetor</td><td>O <kbd>×</kbd> no canto, ou clique no fundo do mapa.</td></tr>
+    <tr><td>Cancelar o modo de enlace</td><td><kbd>Esc</kbd>.</td></tr>
+  </tbody>
+</table>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="instalacao.html"><small>Anterior</small>Instalação</a><a class="next" href="mapa.html"><small>Próximo</small>Mapa e dispositivos</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#entrar">Entrar</a></li><li class="l2"><a href="#conhecer-a-interface">Conhecer a interface</a></li><li class="l2"><a href="#de-zero-a-uma-rede-monitorada">De zero a uma rede monitorada</a></li><li class="l2"><a href="#areas-do-menu">Áreas do menu</a></li><li class="l3"><a href="#dashboard">Dashboard</a></li><li class="l3"><a href="#mapa">Mapa</a></li><li class="l3"><a href="#dispositivos">Dispositivos</a></li><li class="l3"><a href="#descoberta-e-eventos">Descoberta e Eventos</a></li><li class="l2"><a href="#atalhos-e-dicas">Atalhos e dicas</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

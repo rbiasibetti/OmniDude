@@ -1,0 +1,6 @@
+package com.omnidude.event;
+
+public enum EventType {
+    DEVICE_DOWN, DEVICE_UP, DEVICE_WARNING, CHECK_FAILED, CHECK_RECOVERED,
+    LINK_DOWN, LINK_UP, THRESHOLD, DISCOVERY, SYSTEM
+}

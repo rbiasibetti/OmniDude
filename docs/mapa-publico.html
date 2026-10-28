@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa público · Manual do OmniDude</title>
+<meta name="description" content="Publicar um mapa para qualquer pessoa ver, sem login, em modo somente leitura e sem detalhes dos dispositivos.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a class="current" aria-current="page" href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Usando · capítulo 11</p><h1>Mapa público</h1><p class="lead">Publicar um mapa para qualquer pessoa ver, sem login, em modo somente leitura e sem detalhes dos dispositivos.</p></header>
+<article class="prose">
+<h2 id="o-que-e">O que é<a class="anchor" href="#o-que-e" aria-label="Link para esta seção">#</a></h2>
+<p><span class="ui">Publicar</span>, na barra do mapa <span class="tag admin">ADMIN</span>, gera um link como <code>/public/&lt;token&gt;</code>. Quem abrir esse link, <strong>sem login</strong>, vê o mapa numa página própria: só as formas, os enlaces e, conforme as opções, os nomes e o estado. Nada de menu, inspetor, Dashboard ou eventos, e nenhum dispositivo é clicável.</p>
+<figure class="figure wide"><a class="zoom" href="img/manual/mapa-publico.jpg" title="Clique para ampliar"><img src="img/manual/mapa-publico.jpg" alt="A página pública: só topologia, nomes e estado (normal, atenção, fora do ar, sem informação)." loading="lazy"></a><figcaption>A página pública: só topologia, nomes e estado (normal, atenção, fora do ar, sem informação).</figcaption></figure>
+
+<h2 id="publicar">Publicar<a class="anchor" href="#publicar" aria-label="Link para esta seção">#</a></h2>
+<ol class="steps">
+  <li>Abra o mapa e clique em <span class="ui">Publicar</span>.</li>
+  <li>Escolha as opções: <strong>mostrar os nomes</strong> e <strong>mostrar o estado</strong>.</li>
+  <li>Copie o link (<span class="ui">Copiar</span>) ou abra-o (<span class="ui">Abrir</span>).</li>
+</ol>
+<figure class="figure"><a class="zoom" href="img/manual/form-publicar.jpg" title="Clique para ampliar"><img src="img/manual/form-publicar.jpg" alt="O diálogo de publicação: opções, link público e ações." loading="lazy"></a><figcaption>O diálogo de publicação: opções, link público e ações.</figcaption></figure>
+<table>
+  <thead><tr><th>Opção</th><th>Desligada</th></tr></thead>
+  <tbody>
+    <tr><td>Mostrar o nome dos dispositivos</td><td>Cada nó mostra só o tipo (Switch, Servidor…).</td></tr>
+    <tr><td>Mostrar o estado (UP, atenção, DOWN)</td><td>O mapa mostra só a topologia.</td></tr>
+  </tbody>
+</table>
+<ul>
+  <li><span class="ui">Gerar novo link</span> troca o endereço: o antigo deixa de funcionar e nunca volta.</li>
+  <li><span class="ui">Despublicar</span> apaga o endereço.</li>
+</ul>
+
+<h2 id="o-que-sai-e-o-que-nao-sai">O que sai e o que não sai<a class="anchor" href="#o-que-sai-e-o-que-nao-sai" aria-label="Link para esta seção">#</a></h2>
+<p>A visão pública é montada <strong>no servidor</strong> com uma lista fixa de campos. Não é a interface normal com coisas escondidas: os dados sensíveis <em>não existem</em> na resposta.</p>
+<div class="grid2">
+  <div><h4 class="ok">Sai</h4><p>Id público (<code>n0</code>, <code>n1</code>…), nome (se permitido), tipo, estado (se permitido), posição, se é nó lógico; nos enlaces: origem, destino, tipo e “com falha”.</p></div>
+  <div><h4 class="bad">Nunca sai</h4><p>IPs, MACs, fabricante, interfaces, tráfego, serviços, notas, rótulos, evidências, ids internos e sugestões de enlace. Nós deduzidos aparecem como “Switch/hub não gerenciável”, sem o nome do equipamento nem da porta.</p></div>
+</div>
+
+<h2 id="seguranca-do-link">Segurança do link<a class="anchor" href="#seguranca-do-link" aria-label="Link para esta seção">#</a></h2>
+<ul>
+  <li><strong>O link é a credencial:</strong> 256 bits aleatórios, sem enumeração. Um token inexistente, malformado ou despublicado dá o mesmo 404.</li>
+  <li>Só <strong>ADMIN</strong> vê ou muda a publicação.</li>
+  <li>Só <code>GET</code>, sem cookies nem sessão; <code>Cache-Control: no-store</code>, <code>X-Robots-Tag: noindex</code>, <code>Referrer-Policy: no-referrer</code> e uma CSP restrita.</li>
+  <li>Limite de <strong>120 requisições por minuto</strong> por origem.</li>
+  <li>O resto do aplicativo (inclusive o SSE e os arquivos da interface) continua exigindo login. A página não pode ser embutida em <code>iframe</code>.</li>
+  <li>A página <strong>atualiza sozinha</strong> a cada 30 s.</li>
+</ul>
+<div class="warn"><p>Quem tiver o link vê o mapa, e o link pode ser repassado. Se suspeitar de vazamento, use <span class="ui">Gerar novo link</span> ou <span class="ui">Despublicar</span>.</p></div>
+
+<h2 id="disponibilizar-para-a-internet">Disponibilizar para a Internet<a class="anchor" href="#disponibilizar-para-a-internet" aria-label="Link para esta seção">#</a></h2>
+<p>O OmniDude escuta só em <code>127.0.0.1</code> por padrão, então o link só abre na própria máquina. Para publicar fora, ponha um <a href="instalacao.html#acessar-de-outras-maquinas-https">proxy reverso com HTTPS</a> na frente e exponha <strong>apenas</strong> <code>/public/</code> e <code>/api/public/</code>; o resto não precisa sair.</p>
+<pre><code>location /public/     { proxy_pass http://127.0.0.1:8080; }
+location /api/public/ { proxy_pass http://127.0.0.1:8080; }
+# nenhuma outra rota é exposta</code></pre>
+<p>Atrás do proxy, o limite de taxa enxerga o IP do proxy, a menos que você configure <code>OMNIDUDE_FORWARD_HEADERS=native</code> (veja <a href="seguranca.html">Segurança</a>).</p>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="eventos-notificacoes.html"><small>Anterior</small>Eventos e notificações</a><a class="next" href="administracao.html"><small>Próximo</small>Administração</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#o-que-e">O que é</a></li><li class="l2"><a href="#publicar">Publicar</a></li><li class="l2"><a href="#o-que-sai-e-o-que-nao-sai">O que sai e o que não sai</a></li><li class="l2"><a href="#seguranca-do-link">Segurança do link</a></li><li class="l2"><a href="#disponibilizar-para-a-internet">Disponibilizar para a Internet</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>

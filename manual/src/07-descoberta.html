@@ -1,0 +1,81 @@
+---
+title: Descoberta de rede
+group: Usando
+desc: Varrer uma faixa de IPs, identificar o que responde (SNMP, portas, NetBIOS, SSDP, mDNS e fabricante do MAC), revisar e importar.
+---
+<h2>Como funciona</h2>
+<p>A descoberta varre uma faixa de endereços e identifica os equipamentos que respondem. <strong>Nada é cadastrado antes da sua revisão.</strong></p>
+{{svg:descoberta|As etapas de uma varredura: da faixa à importação revisada.}}
+
+<h2>Iniciar uma varredura</h2>
+<ol class="steps">
+  <li>Abra <em>Descoberta</em> no menu.</li>
+  <li>Informe a <strong>faixa (CIDR)</strong>, por exemplo <code>192.168.1.0/24</code>.</li>
+  <li>Ajuste as <strong>portas TCP sondadas</strong> (padrão: <code>22, 80, 443, 3389</code>).</li>
+  <li>Marque, na ordem desejada, os <strong>perfis SNMP</strong> a tentar. Cada host que responde é consultado com o primeiro perfil que funcionar.</li>
+  <li>Marque a <strong>confirmação de autorização</strong> e clique em <span class="ui">Iniciar varredura</span>.</li>
+</ol>
+{{img:descoberta-form.jpg|O formulário de nova varredura.}}
+<p>A varredura mostra o <strong>progresso ao vivo</strong> e pode ser <strong>cancelada</strong>. Só roda <em>um job por vez</em>. O <em>Histórico</em> (canto superior direito) reabre varreduras anteriores.</p>
+
+<h3>Limites de segurança</h3>
+<ul>
+  <li><strong>Só redes privadas</strong>, loopback, <em>link-local</em> e CGNAT. Faixas públicas exigem <code>omnidude.discovery.allow-public=true</code>.</li>
+  <li>Faixas com mais de <strong>4.096</strong> endereços pedem uma segunda confirmação; o teto absoluto é <strong>65.536</strong>.</li>
+  <li>A taxa é limitada (padrão: 128 sondas simultâneas e 200 hosts iniciados por segundo), para não sobrecarregar a rede.</li>
+  <li>Hosts que já estão cadastrados não são sondados de novo.</li>
+</ul>
+<div class="warn"><p>A varredura envia pacotes a <strong>todos</strong> os endereços da faixa e testa a community SNMP escolhida. Só faça isso em redes próprias ou com autorização expressa; o formulário exige a confirmação por isso.</p></div>
+
+<h2>O que é consultado em cada host</h2>
+<table>
+  <thead><tr><th>Etapa</th><th>O que traz</th></tr></thead>
+  <tbody>
+    <tr><td>Ping e portas TCP</td><td>Quem responde e quais serviços estão abertos.</td></tr>
+    <tr><td>SNMP</td><td><code>sysName</code>, <code>sysDescr</code>, <code>sysObjectID</code> e, daí, o sistema e o tipo sugerido.</td></tr>
+    <tr><td>NetBIOS</td><td>Nome e grupo (típico de Windows e Samba).</td></tr>
+    <tr><td>SSDP/UPnP</td><td>Fabricante, modelo e tipo; roteadores respondem como <code>InternetGatewayDevice</code>.</td></tr>
+    <tr><td>mDNS</td><td>Nome <code>.local</code> de Apple, Linux e impressoras.</td></tr>
+    <tr><td>Fabricante do MAC</td><td>O prefixo do MAC (OUI) é consultado na tabela do IEEE.</td></tr>
+  </tbody>
+</table>
+<p>As consultas NetBIOS, SSDP e mDNS são <em>unicast</em>, feitas só nos hosts encontrados. O nome obtido vira o nome sugerido quando não há SNMP. Para desligá-las: <code>omnidude.discovery.passive=false</code>.</p>
+
+<h3>Fabricante pelo MAC</h3>
+<p>O fabricante aparece na revisão, no inspetor e na lista de dispositivos, e a busca do cabeçalho também o encontra. Ele entra na identificação por regras: serve de palpite quando não há SNMP nem portas, e refina o que o SNMP não separa (um Linux de fabricante Ubiquiti é access point; de fabricante Synology, storage).</p>
+<ul>
+  <li>O MAC só é conhecido para hosts <strong>na mesma rede local</strong> (tabela ARP do servidor) ou depois de <span class="ui">Ler via SNMP</span>. Atrás de um roteador, o host não tem fabricante.</li>
+  <li>MAC <strong>aleatório</strong> (celulares) e <strong>virtual</strong> tem o bit “administrado localmente” ligado: a interface mostra <em>MAC aleatório/virtual</em> em vez de arriscar um fabricante.</li>
+</ul>
+
+<h2>Revisar e importar</h2>
+<p>Ao terminar, a revisão lista cada host com IP, nome, tipo, sistema, MAC, portas abertas e perfil SNMP que funcionou.</p>
+{{img:descoberta-revisao.jpg|A revisão: os três switches já importados ficam esmaecidos; os demais hosts esperam a sua decisão.|wide}}
+<ul>
+  <li><strong>Nome e Tipo</strong> são editáveis antes de importar. Quando há identificação, o tipo já vem sugerido.</li>
+  <li><span class="ui">Selecionar todos</span> marca os hosts novos; <span class="ui">Limpar</span> desmarca.</li>
+  <li><strong>Mapa de destino</strong> escolhe em qual mapa os dispositivos entram.</li>
+  <li><strong>Criar checagem TCP para cada porta aberta</strong> cria um serviço por porta encontrada (além do Ping).</li>
+  <li><span class="ui">Importar N selecionado(s)</span> cadastra os dispositivos, com o perfil SNMP que funcionou, e, nos equipamentos SNMP, já lê as interfaces e propõe enlaces.</li>
+  <li><span class="ui">Ignorar</span> marca o host como ignorado: ele sai da lista de novos e não é importado.</li>
+</ul>
+<h3>Hosts que parecem já cadastrados</h3>
+<p>Se um host tem o MAC (ou, como sugestão, o nome) de um dispositivo já cadastrado com <em>outro IP</em>, a revisão mostra <strong>“Parece ser X (cadastrado com Y)”</strong> e o botão <span class="ui">Atualizar IP</span>. Isso evita um duplicado quando o DHCP troca o endereço. “Selecionar todos” deixa esse host de fora, e importá-lo como novo exige marcá-lo de propósito. Veja <a href="identidade.html">Identidade e DHCP</a>.</p>
+
+<h2>Personalizar a identificação</h2>
+<p>A identificação por regras vem embutida. Para adaptá-la, crie arquivos no <strong>diretório de dados</strong>:</p>
+<table>
+  <thead><tr><th>Arquivo</th><th>Para que serve</th></tr></thead>
+  <tbody>
+    <tr><td><code>fingerprints.yml</code></td><td>Regras próprias de identificação (por <code>sysObjectID</code>, <code>sysDescr</code>, portas, <code>vendor:</code>…). As suas regras vêm <em>antes</em> das embutidas.</td></tr>
+    <tr><td><code>mac-vendor.txt</code></td><td>Acrescenta ou corrige prefixos de MAC, sem recompilar. Uma linha por prefixo: <code>&lt;prefixo hex&gt;&lt;TAB&gt;&lt;fabricante&gt;</code>, de 1 a 12 dígitos. As suas linhas vencem as embutidas.</td></tr>
+  </tbody>
+</table>
+<div class="note"><p>As regras só por fabricante vêm depois de todas as outras e cobrem apenas fabricantes de tipo quase sempre único. As tabelas de fabricante embutidas são as do projeto <em>arp-scan</em> (<code>ieee-oui.txt</code> e <code>mac-vendor.txt</code>).</p></div>
+
+<h2>Limitações</h2>
+<ul>
+  <li>Só <strong>IPv4</strong>. Não há traceroute (enlaces de camada 3 entre sub-redes) nem mDNS por multicast.</li>
+  <li>O SNMP foi testado contra agentes simulados, não contra uma frota de equipamentos reais.</li>
+  <li>Dispositivos fora da rede local do servidor não têm MAC e, portanto, não têm fabricante, a menos que um roteador SNMP forneça o ARP.</li>
+</ul>

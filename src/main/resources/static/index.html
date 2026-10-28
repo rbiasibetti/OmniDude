@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmniDude NMS</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%2322c55e'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/vendor/uplot.min.css">
+  <script src="/vendor/uplot.min.js"></script>
+  <script src="/js/common.js"></script>
+  <script src="/js/chart.js"></script>
+  <script src="/js/app.js"></script>
+  <script defer src="/vendor/alpine.min.js"></script>
+  <script src="/vendor/cytoscape.min.js"></script>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 overflow-hidden">
+<div x-data="omniApp()" x-cloak class="h-full flex flex-col text-sm" @keydown.escape.window="closeModals()">
+
+  <!-- Cabeçalho -->
+  <header class="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 bg-slate-900 border-b border-slate-800">
+    <div class="flex items-center gap-2 font-semibold">
+      <span class="inline-block w-3 h-3 rounded-full bg-up"></span> OmniDude NMS
+    </div>
+    <div class="flex items-center gap-3 ml-2" aria-label="Resumo da rede">
+      <span class="text-up" title="Dispositivos no ar">● <b x-text="counts.UP"></b> UP</span>
+      <span class="text-warn" title="Dispositivos com degradação">▲ <b x-text="counts.WARNING"></b><span class="hidden sm:inline"> ATENÇÃO</span></span>
+      <span class="text-down" title="Dispositivos fora do ar">✖ <b x-text="counts.DOWN"></b> DOWN</span>
+    </div>
+    <div class="hidden sm:block flex-1"></div>
+    <input type="search" x-model="search" @input="applySearch()" @keydown.enter="focusFirstMatch()"
+           placeholder="Buscar IP, nome, MAC ou fabricante…" aria-label="Buscar dispositivo"
+           class="order-last sm:order-none w-full sm:w-64 rounded-md bg-slate-800 border border-slate-700 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+    <span class="hidden md:inline text-xs" :class="connected ? 'text-up' : 'text-warn'"
+          x-text="connected ? 'tempo real: conectado' : 'tempo real: reconectando…'"></span>
+    <template x-if="me">
+      <div class="flex items-center gap-2 ml-auto sm:ml-0">
+        <span class="hidden sm:inline text-slate-400" x-text="me.username + ' (' + me.role + ')'"></span>
+        <button @click="logout()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">Sair</button>
+      </div>
+    </template>
+  </header>
+
+  <!-- Aviso de manutenção (todos os usuários) -->
+  <div x-show="maintenance" class="px-3 py-1.5 bg-amber-900/60 border-b border-amber-700 text-amber-100 text-center" role="status">
+    Modo de manutenção: as notificações estão suspensas (eventos e checagens seguem normais).
+    <button x-show="isAdmin" @click="go('settings'); settingsTab = 'adjustments'; openSettings()" class="underline ml-2">Gerenciar</button>
+  </div>
+
+  <!-- Navegação em telas estreitas -->
+  <nav class="md:hidden flex gap-1 px-2 py-1 bg-slate-900 border-b border-slate-800 overflow-x-auto whitespace-nowrap">
+    <template x-for="item in navList" :key="item.id">
+      <button :disabled="!!item.soon" @click="go(item.id)"
+              :class="view === item.id ? 'bg-slate-700' : 'hover:bg-slate-800'"
+              class="rounded px-2 py-1 disabled:opacity-40" x-text="item.label"></button>
+    </template>
+  </nav>
+
+  <div class="flex-1 flex min-h-0">
+    <!-- Menu lateral -->
+    <aside class="hidden md:flex flex-col w-48 shrink-0 bg-slate-900 border-r border-slate-800 p-2 gap-1" aria-label="Navegação">
+      <template x-for="item in navList" :key="item.id">
+        <button :disabled="!!item.soon" @click="go(item.id)"
+                :title="item.soon ? 'Em breve' : ''"
+                :class="view === item.id ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'"
+                class="text-left rounded-md px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed flex justify-between">
+          <span x-text="item.label"></span>
+          <span x-show="item.id === 'events' && unacked > 0" class="rounded-full bg-down text-white text-xs px-1.5" x-text="unacked"></span>
+        </button>
+      </template>
+    </aside>
+
+    <main class="flex-1 min-w-0 flex flex-col">
+      <!-- DASHBOARD -->
+      <section x-show="view === 'dashboard'" class="flex-1 min-h-0 overflow-auto p-4 space-y-4">
+        <template x-if="dash">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+                <div class="text-slate-400">Dispositivos</div>
+                <div class="text-3xl font-semibold" x-text="dash.totalDevices"></div>
+                <div class="text-xs text-slate-500" x-text="dash.pausedDevices + ' pausado(s)'"></div>
+              </div>
+              <template x-for="s in ['UP', 'WARNING', 'DOWN', 'UNKNOWN']" :key="s">
+                <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+                  <div :class="statusClass(s)" x-text="statusGlyph(s) + ' ' + statusText(s)"></div>
+                  <div class="text-3xl font-semibold" x-text="dash.devices[s]"></div>
+                  <div class="text-xs text-slate-500" x-text="dash.checks[s] + ' serviço(s)'"></div>
+                </div>
+              </template>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-4">
+              <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+                <h2 class="font-semibold mb-2">Problemas ativos</h2>
+                <ul class="divide-y divide-slate-800">
+                  <template x-for="p in dash.problems" :key="p.deviceId">
+                    <li>
+                      <button class="w-full flex items-center justify-between gap-3 py-2 text-left hover:bg-slate-800/50 rounded"
+                              @click="openDevice(p.deviceId, true)">
+                        <span><span :class="statusClass(p.status)" x-text="statusGlyph(p.status)"></span>
+                          <span x-text="p.name"></span> <span class="font-mono text-slate-500" x-text="p.ip"></span></span>
+                        <span class="text-slate-400 whitespace-nowrap" x-text="statusText(p.status) + ' ' + since(p.since)"></span>
+                      </button>
+                    </li>
+                  </template>
+                </ul>
+                <p x-show="dash.problems.length === 0" class="text-up py-3">✔ Nenhum problema ativo.</p>
+              </div>
+
+              <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+                <h2 class="font-semibold mb-2">Maiores latências <span class="text-xs text-slate-500">(medidas nos últimos 15 min)</span></h2>
+                <ul class="space-y-2">
+                  <template x-for="r in dash.slowest" :key="r.deviceId + r.check">
+                    <li>
+                      <button class="w-full text-left" @click="openDevice(r.deviceId, true)">
+                        <div class="flex justify-between gap-2">
+                          <span class="truncate"><span x-text="r.device"></span> <span class="text-slate-500" x-text="'· ' + r.check"></span></span>
+                          <span class="font-mono" x-text="r.ms + ' ms'"></span>
+                        </div>
+                        <div class="h-1.5 rounded bg-slate-800 mt-1">
+                          <div class="h-1.5 rounded" :class="r.status === 'WARNING' ? 'bg-warn' : 'bg-sky-500'"
+                               :style="'width:' + Math.max(3, Math.round(100 * r.ms / Math.max(1, dash.slowest[0].ms))) + '%'"></div>
+                        </div>
+                      </button>
+                    </li>
+                  </template>
+                </ul>
+                <p x-show="dash.slowest.length === 0" class="text-slate-500 py-3">Sem medições recentes.</p>
+              </div>
+            </div>
+
+            <div class="rounded-xl bg-slate-900 border border-slate-800 p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="font-semibold">Últimos eventos</h2>
+                <button class="text-sky-400 hover:underline" @click="go('events')"
+                        x-text="dash.unackedEvents + ' sem confirmação — ver todos'"></button>
+              </div>
+              <ul class="divide-y divide-slate-800">
+                <template x-for="e in dash.events" :key="e.id">
+                  <li class="flex gap-3 py-1.5">
+                    <span :class="sevClass(e.severity)" x-text="sevGlyph(e.severity)" class="w-4 text-center"></span>
+                    <span class="text-slate-500 w-36 shrink-0" x-text="fmt(e.ts)"></span>
+                    <span class="truncate" x-text="e.message"></span>
+                  </li>
+                </template>
+              </ul>
+              <p x-show="dash.events.length === 0" class="text-slate-500 py-2">Sem eventos.</p>
+            </div>
+          </div>
+        </template>
+      </section>
+
+      <!-- DESCOBERTA -->
+      <section x-show="view === 'discovery'" class="flex-1 min-h-0 overflow-auto p-4 space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-base font-semibold mr-2">Descoberta de rede</h2>
+          <button x-show="disc.step !== 'form'" @click="newScan()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">+ Nova varredura</button>
+          <template x-if="disc.jobs.length">
+            <label class="flex items-center gap-2 ml-auto text-slate-400">Histórico
+              <select @change="openJobById($event.target.value)" class="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-slate-100">
+                <option value="">(escolher)</option>
+                <template x-for="j in disc.jobs" :key="j.id">
+                  <option :value="j.id" x-text="'#' + j.id + ' · ' + j.cidr + ' · ' + jobStatusText(j.status) + ' · ' + j.hostsFound + ' novo(s)'"></option>
+                </template>
+              </select>
+            </label>
+          </template>
+        </div>
+
+        <!-- Passo 1: parâmetros -->
+        <form x-show="disc.step === 'form'" @submit.prevent="startDiscovery()" class="max-w-2xl rounded-xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+          <p class="text-slate-400">A varredura sonda cada endereço da faixa (ping e portas TCP) e, nos que respondem, tenta os perfis SNMP escolhidos para identificar o equipamento. Nada é cadastrado antes da sua revisão.</p>
+          <label class="block">Faixa (CIDR)
+            <input x-model="disc.form.cidr" required placeholder="192.168.1.0/24" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+            <span class="text-xs text-slate-500" x-show="estimatedHosts() != null" x-text="estimatedHosts() + ' endereço(s) a sondar'"></span>
+          </label>
+          <label class="block">Portas TCP sondadas
+            <input x-model="disc.form.ports" placeholder="22, 80, 443, 3389" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+          </label>
+          <fieldset>
+            <legend class="mb-1">Perfis SNMP a tentar (na ordem)</legend>
+            <div class="space-y-1">
+              <template x-for="p in profiles" :key="p.id">
+                <label class="flex items-center gap-2"><input type="checkbox" :value="p.id" x-model.number="disc.form.profileIds">
+                  <span x-text="p.name + ' · v' + p.version + ' · porta ' + p.port"></span></label>
+              </template>
+            </div>
+            <p x-show="profiles.length === 0" class="text-slate-500 text-xs">Sem perfis cadastrados: a varredura só fará ping e portas.</p>
+            <button type="button" @click="openProfiles()" class="mt-2 text-sky-400 hover:underline text-xs">Gerenciar perfis SNMP…</button>
+          </fieldset>
+          <label class="flex items-start gap-2" x-show="estimatedHosts() > 4096">
+            <input type="checkbox" x-model="disc.form.confirmLarge" class="mt-1">
+            <span>Confirmo a varredura grande (mais de 4.096 endereços). Pode levar vários minutos e gerar bastante tráfego.</span>
+          </label>
+          <label class="flex items-start gap-2 rounded-md border border-amber-700/60 bg-amber-950/30 p-3">
+            <input type="checkbox" x-model="disc.form.authorized" class="mt-1">
+            <span>Tenho autorização para varrer esta rede. Varreduras e testes de community SNMP só devem ser feitos em redes próprias ou expressamente autorizadas.</span>
+          </label>
+          <p class="text-red-400" role="alert" x-text="disc.error"></p>
+          <button :disabled="disc.busy || !disc.form.authorized" class="rounded-md bg-sky-600 hover:bg-sky-500 px-4 py-2 font-medium disabled:opacity-50">Iniciar varredura</button>
+        </form>
+
+        <!-- Passo 2: progresso -->
+        <div x-show="disc.step === 'progress' && disc.job" class="max-w-2xl rounded-xl bg-slate-900 border border-slate-800 p-5 space-y-3">
+          <template x-if="disc.job">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="font-semibold" x-text="'Varredura de ' + disc.job.cidr"></h3>
+                <span class="text-slate-400" x-text="jobStatusText(disc.job.status)"></span>
+              </div>
+              <div class="h-3 rounded bg-slate-800 overflow-hidden" role="progressbar" :aria-valuenow="progressPct()" aria-valuemin="0" aria-valuemax="100">
+                <div class="h-3 bg-sky-500 transition-all" :style="'width:' + progressPct() + '%'"></div>
+              </div>
+              <p class="text-slate-300" x-text="disc.job.hostsScanned + ' de ' + disc.job.hostsTotal + ' · ' + disc.job.hostsFound + ' encontrado(s) · ' + disc.job.hostsKnown + ' já cadastrado(s)'"></p>
+              <button x-show="isAdmin && (disc.job.status === 'RUNNING' || disc.job.status === 'PENDING')" @click="cancelDiscovery()"
+                      class="rounded-md border border-red-800 text-red-300 px-3 py-1.5 hover:bg-red-950">Cancelar</button>
+            </div>
+          </template>
+        </div>
+
+        <!-- Passo 3: revisão e importação -->
+        <div x-show="disc.step === 'review' && disc.job" class="space-y-3">
+          <template x-if="disc.job">
+            <div class="space-y-3">
+              <p class="text-slate-300">
+                <b x-text="disc.job.cidr"></b> — <span x-text="jobStatusText(disc.job.status)"></span>:
+                <span x-text="disc.hosts.length + ' host(s) encontrado(s), ' + disc.job.hostsKnown + ' já cadastrado(s)'"></span>
+                <span x-show="disc.job.error" class="text-warn" x-text="' · ' + disc.job.error"></span>
+              </p>
+
+              <div x-show="isAdmin && newHosts().length" class="flex flex-wrap items-center gap-3 rounded-xl bg-slate-900 border border-slate-800 p-3">
+                <button @click="selectAllNew()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">Selecionar todos</button>
+                <button @click="disc.selected = {}" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">Limpar</button>
+                <label class="flex items-center gap-2">Mapa de destino
+                  <select x-model="disc.mapId" class="rounded-md bg-slate-800 border border-slate-700 px-2 py-1">
+                    <template x-for="m in maps" :key="m.id"><option :value="String(m.id)" :selected="String(m.id) === disc.mapId" x-text="m.name"></option></template>
+                  </select>
+                </label>
+                <label class="flex items-center gap-2"><input type="checkbox" x-model="disc.openPortChecks"> Criar checagem TCP para cada porta aberta</label>
+                <button @click="importSelected()" :disabled="disc.busy || selectedCount() === 0"
+                        class="ml-auto rounded-md bg-sky-600 hover:bg-sky-500 px-4 py-1.5 font-medium disabled:opacity-50"
+                        x-text="'Importar ' + selectedCount() + ' selecionado(s)'"></button>
+              </div>
+
+              <div x-show="disc.result" class="rounded-xl border border-up/40 bg-green-950/20 p-3 space-y-1">
+                <template x-if="disc.result">
+                  <div class="space-y-1">
+                    <p class="text-up" x-text="'✔ ' + disc.result.deviceIds.length + ' dispositivo(s) importado(s); ' + disc.result.suggestedLinks + ' enlace(s) sugerido(s) por LLDP.'"></p>
+                    <template x-for="m in disc.result.skipped" :key="m"><p class="text-warn text-xs" x-text="'⚠ ' + m"></p></template>
+                    <template x-for="m in disc.result.warnings" :key="m"><p class="text-warn text-xs" x-text="'⚠ ' + m"></p></template>
+                    <button @click="go('map')" class="text-sky-400 hover:underline text-xs">Ver no mapa →</button>
+                  </div>
+                </template>
+              </div>
+              <p class="text-red-400" role="alert" x-text="disc.error"></p>
+
+              <div class="overflow-x-auto rounded-xl border border-slate-800">
+                <table class="w-full text-left">
+                  <thead class="text-slate-400 bg-slate-900">
+                    <tr><th class="p-2 w-8"></th><th class="p-2">IP</th><th class="p-2">Nome</th><th class="p-2">Tipo</th>
+                        <th class="p-2">Sistema</th><th class="p-2">MAC</th><th class="p-2">Portas</th><th class="p-2">SNMP</th><th class="p-2"></th></tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="h in disc.hosts" :key="h.id">
+                      <tr class="border-t border-slate-800" :class="h.state !== 'NEW' ? 'opacity-50' : ''">
+                        <td class="p-2"><input type="checkbox" :disabled="h.state !== 'NEW' || !isAdmin" x-model="disc.selected[h.id]" :aria-label="'Importar ' + h.ip"></td>
+                        <td class="p-2">
+                          <span class="font-mono" x-text="h.ip"></span>
+                          <div x-show="h.matchedDeviceId && h.state === 'NEW'" class="mt-1 text-xs text-violet-300 max-w-[14rem]">
+                            Parece ser <b x-text="h.matchedDeviceName"></b> (cadastrado com <span class="font-mono" x-text="h.matchedOldIp"></span>), <span x-text="matchByText(h.matchedBy)"></span>.
+                            <button x-show="isAdmin" @click="adoptHost(h)" class="block mt-0.5 rounded border border-violet-700 px-1.5 py-0.5 hover:bg-violet-950">Atualizar IP</button>
+                          </div>
+                        </td>
+                        <td class="p-2"><input :disabled="h.state !== 'NEW' || !isAdmin" x-model="disc.names[h.id]" :placeholder="h.hostname || h.ip"
+                                               class="w-40 rounded bg-slate-800 border border-slate-700 px-2 py-1"></td>
+                        <td class="p-2">
+                          <select :disabled="h.state !== 'NEW' || !isAdmin" x-model="disc.types[h.id]" class="rounded bg-slate-800 border border-slate-700 px-2 py-1">
+                            <template x-for="(label, key) in typeLabels" :key="key"><option :value="key" :selected="key === disc.types[h.id]" x-text="label"></option></template>
+                          </select>
+                        </td>
+                        <td class="p-2 max-w-xs">
+                          <span class="block truncate" :title="h.sysDescr || ''" x-text="h.osInfo || h.sysDescr || '—'"></span>
+                          <span class="block truncate text-xs text-slate-500" x-show="h.hints" :title="h.hints" x-text="h.hints"></span>
+                        </td>
+                        <td class="p-2 text-xs">
+                          <span class="font-mono" x-text="h.mac || '—'"></span>
+                          <span class="block text-slate-400" x-show="h.macVendor" x-text="h.macVendor"></span>
+                          <span class="block text-slate-500" x-show="h.macLocal" title="Bit de endereço administrado localmente: MAC aleatório (celular) ou virtual; o OUI não identifica o fabricante">MAC aleatório/virtual</span>
+                        </td>
+                        <td class="p-2 font-mono text-xs" x-text="(h.openPorts && h.openPorts.length) ? h.openPorts.join(', ') : '—'"></td>
+                        <td class="p-2" x-text="h.snmpProfileId ? profileName(h.snmpProfileId) : '—'"></td>
+                        <td class="p-2 whitespace-nowrap">
+                          <span x-show="h.state !== 'NEW'" class="text-slate-400" x-text="h.state === 'IMPORTED' ? 'importado' : 'ignorado'"></span>
+                          <button x-show="h.state === 'NEW' && isAdmin" @click="ignoreHost(h)" class="text-slate-400 hover:text-white text-xs">Ignorar</button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+                <p x-show="disc.hosts.length === 0" class="p-4 text-slate-500">Nenhum host novo respondeu nesta faixa.</p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <!-- MAPA -->
+      <section x-show="view === 'map'" class="flex-1 min-h-0 flex flex-col">
+        <div class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/60 [&_button]:whitespace-nowrap">
+          <label class="flex items-center gap-2">Mapa
+            <select x-model.number="mapId" @change="loadMap(true)" class="rounded-md bg-slate-800 border border-slate-700 px-2 py-1">
+              <template x-for="m in maps" :key="m.id"><option :value="m.id" x-text="m.name"></option></template>
+            </select>
+          </label>
+          <template x-if="isAdmin">
+            <div class="flex items-center gap-2">
+              <button @click="newMap()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">+ Mapa</button>
+              <button @click="openDeviceForm(null)" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1 font-medium">+ Dispositivo</button>
+              <button @click="toggleLinkMode()" :class="linkMode ? 'bg-violet-700 border-violet-500' : 'border-slate-700 hover:bg-slate-800'"
+                      class="rounded-md border px-2 py-1" title="Clique em dois dispositivos para ligá-los"
+                      x-text="linkMode ? (linkSource ? 'Escolha o destino…' : 'Escolha a origem…') : '+ Enlace'"></button>
+              <button @click="detectLinks()" :disabled="linksBusy" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800 disabled:opacity-50"
+                      title="Lê vizinhos (LLDP, CDP, MNDP), tabelas FDB e ARP dos equipamentos SNMP e sugere enlaces">Detectar enlaces</button>
+              <button @click="openPublish()" class="rounded-md border px-2 py-1"
+                      :class="mapPublished() ? 'border-emerald-700 text-emerald-300 hover:bg-emerald-950' : 'border-slate-700 hover:bg-slate-800'"
+                      title="Publicar este mapa para acesso público somente leitura"
+                      x-text="mapPublished() ? 'Publicado' : 'Publicar'"></button>
+              <button @click="confirmAllSuggested()" :disabled="linksBusy" x-show="suggestedCount() > 0"
+                      class="rounded-md border border-violet-700 text-violet-300 px-2 py-1 hover:bg-violet-950 disabled:opacity-50"
+                      x-text="'Confirmar sugeridos (' + suggestedCount() + ')'"></button>
+            </div>
+          </template>
+          <template x-if="isAdmin">
+            <button @click="autoLayout()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800"
+                    title="Reorganiza os nós não fixados pela topologia dos enlaces">Organizar</button>
+          </template>
+          <button @click="fit()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800" title="Enquadrar tudo">⌂ Enquadrar</button>
+          <span class="hidden 2xl:inline text-xs text-slate-500">Arraste para mover · zoom: roda do mouse · pontilhado roxo = enlace sugerido (clique para confirmar)</span>
+        </div>
+        <div class="relative flex-1 min-h-0">
+          <div x-ref="cy" class="absolute inset-0" role="img" aria-label="Mapa de topologia da rede"></div>
+          <p x-show="map && map.nodes.length === 0" class="absolute inset-0 flex items-center justify-center text-slate-500 pointer-events-none">
+            Nenhum dispositivo neste mapa.
+          </p>
+        </div>
+      </section>
+
+      <!-- DISPOSITIVOS -->
+      <section x-show="view === 'devices'" class="flex-1 min-h-0 overflow-auto p-3">
+        <table class="w-full text-left">
+          <thead class="text-slate-400 border-b border-slate-800">
+            <tr><th class="py-2 pr-3">Nome</th><th class="pr-3">IP</th><th class="pr-3">Tipo</th><th class="pr-3 hidden md:table-cell">Fabricante</th><th class="pr-3">Estado</th><th>Desde</th></tr>
+          </thead>
+          <tbody>
+            <template x-for="d in filteredDevices" :key="d.id">
+              <tr @click="openDevice(d.id, true)" class="border-b border-slate-900 hover:bg-slate-900 cursor-pointer">
+                <td class="py-2 pr-3" x-text="d.name + (d.enabled ? '' : ' (pausado)')"></td>
+                <td class="pr-3 font-mono" x-text="d.virtualNode ? '—' : d.primaryIp"></td>
+                <td class="pr-3" x-text="typeLabel(d.deviceType)"></td>
+                <td class="pr-3 hidden md:table-cell text-slate-400" x-text="d.macVendor || (d.macLocal ? 'MAC aleatório/virtual' : '—')"></td>
+                <td class="pr-3"><span :class="statusClass(d.status)" x-text="statusText(d.status)"></span></td>
+                <td class="text-slate-400" x-text="since(d.statusSince)"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <p x-show="filteredDevices.length === 0" class="py-6 text-slate-500">Nenhum dispositivo encontrado.</p>
+      </section>
+
+
+      <!-- CONFIGURAÇÕES (ADMIN) -->
+      <section x-show="view === 'settings' && isAdmin" class="flex-1 min-h-0 overflow-auto p-3 space-y-4">
+        <div class="flex flex-wrap gap-1 border-b border-slate-800 pb-2">
+          <template x-for="t in [['notifications','Notificações'],['adjustments','Ajustes e manutenção'],['users','Usuários'],['backup','Backup']]" :key="t[0]">
+            <button @click="settingsTab = t[0]; openSettings()" :class="settingsTab === t[0] ? 'bg-slate-700 text-white' : 'text-slate-300 hover:bg-slate-800'"
+                    class="rounded-md px-3 py-1.5" x-text="t[1]"></button>
+          </template>
+        </div>
+
+        <!-- Notificações -->
+        <div x-show="settingsTab === 'notifications'" class="space-y-6">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-base font-semibold">Canais</h2>
+              <button @click="newChannel()" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium">+ Canal</button>
+            </div>
+            <p x-show="channels.length === 0" class="text-slate-500">Nenhum canal. Crie um (webhook, Telegram ou e-mail) e depois uma regra que diga o que ele recebe.</p>
+            <ul class="space-y-2">
+              <template x-for="c in channels" :key="c.id">
+                <li class="rounded-md border border-slate-800 bg-slate-900 p-3">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="min-w-0">
+                      <b x-text="c.name"></b>
+                      <span class="ml-2 rounded bg-slate-800 px-1.5 py-0.5 text-xs" x-text="channelTypeLabel(c.type)"></span>
+                      <span x-show="!c.enabled" class="ml-1 text-xs text-slate-500">(desligado)</span>
+                      <p class="text-xs text-slate-400 truncate" x-text="channelSummary(c)"></p>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                      <button @click="testChannel(c)" :disabled="!!(chTest[c.id] && chTest[c.id].busy)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-50">Testar</button>
+                      <button @click="toggleChannel(c)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800" x-text="c.enabled ? 'Desligar' : 'Ligar'"></button>
+                      <button @click="editChannel(c)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800">Editar</button>
+                      <button @click="removeChannel(c)" class="rounded border border-red-900 text-red-300 px-2 py-1 text-xs hover:bg-red-950">Excluir</button>
+                    </div>
+                  </div>
+                  <p x-show="chTest[c.id] && chTest[c.id].busy" class="text-xs text-slate-400 mt-1">Enviando teste…</p>
+                  <p x-show="chTest[c.id] && !chTest[c.id].busy && chTest[c.id].ok" class="text-xs text-up mt-1">✔ Mensagem de teste enviada.</p>
+                  <p x-show="chTest[c.id] && !chTest[c.id].busy && chTest[c.id].ok === false" class="text-xs text-down mt-1" x-text="'✖ ' + (chTest[c.id] && chTest[c.id].error)"></p>
+                </li>
+              </template>
+            </ul>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-base font-semibold">Regras</h2>
+              <button @click="newRule()" :disabled="channels.length === 0" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium disabled:opacity-50">+ Regra</button>
+            </div>
+            <p x-show="rules.length === 0" class="text-slate-500">Sem regras, nenhum canal recebe nada.</p>
+            <ul class="space-y-2">
+              <template x-for="r in rules" :key="r.id">
+                <li class="rounded-md border border-slate-800 bg-slate-900 p-3 flex flex-wrap items-center justify-between gap-2" :class="r.enabled ? '' : 'opacity-60'">
+                  <div class="min-w-0">
+                    <b x-text="r.channelName"></b>
+                    <p class="text-xs text-slate-400" x-text="ruleText(r)"></p>
+                  </div>
+                  <div class="flex gap-1">
+                    <button @click="toggleRule(r)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800" x-text="r.enabled ? 'Desligar' : 'Ligar'"></button>
+                    <button @click="editRule(r)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800">Editar</button>
+                    <button @click="removeRule(r)" class="rounded border border-red-900 text-red-300 px-2 py-1 text-xs hover:bg-red-950">Excluir</button>
+                  </div>
+                </li>
+              </template>
+            </ul>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-base font-semibold">Histórico de envios <span class="text-xs text-slate-500">(30 dias)</span></h2>
+              <button @click="openSettings()" class="rounded-md border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800">Atualizar</button>
+            </div>
+            <p x-show="notifLog.length === 0" class="text-slate-500">Nada enviado ainda.</p>
+            <div class="overflow-auto">
+              <table class="w-full text-left text-xs" x-show="notifLog.length > 0">
+                <thead class="text-slate-400 border-b border-slate-800"><tr><th class="py-1 pr-3">Quando</th><th class="pr-3">Canal</th><th class="pr-3">Resultado</th><th>Detalhe</th></tr></thead>
+                <tbody>
+                  <template x-for="l in notifLog" :key="l.id">
+                    <tr class="border-b border-slate-900">
+                      <td class="py-1 pr-3 whitespace-nowrap" x-text="fmtTime(l.ts)"></td>
+                      <td class="pr-3" x-text="l.channel"></td>
+                      <td class="pr-3" :class="l.status === 'SENT' || l.status === 'TEST' ? 'text-up' : (l.status === 'FAILED' ? 'text-down' : 'text-warn')"
+                          x-text="logStatusText(l.status) + (l.attempts > 1 ? ' (' + l.attempts + ' tentativas)' : '')"></td>
+                      <td class="text-slate-400" x-text="l.detail || ''"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ajustes e manutenção -->
+        <div x-show="settingsTab === 'adjustments'" class="space-y-6 max-w-3xl">
+          <div class="rounded-md border p-3" :class="maintenanceNow() ? 'border-amber-700 bg-amber-950/40' : 'border-slate-800 bg-slate-900'">
+            <h2 class="text-base font-semibold">Modo de manutenção</h2>
+            <p class="text-slate-300 text-sm">Suspende todas as notificações (eventos e checagens continuam). Para pausar um só dispositivo, use "Pausar monitoramento" no inspetor.</p>
+            <p class="mt-1"><b x-text="maintenanceText()"></b></p>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <template x-for="m in [[30,'30 min'],[60,'1 hora'],[240,'4 horas'],[0,'Até eu desligar']]" :key="m[0]">
+                <button @click="setMaintenance(m[0])" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800" x-text="'Ligar: ' + m[1]"></button>
+              </template>
+              <button x-show="maintenanceNow()" @click="setMaintenance(false)" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium">Desligar</button>
+            </div>
+          </div>
+
+          <template x-for="g in adjustmentGroups()" :key="g.name">
+            <div>
+              <h2 class="text-base font-semibold mb-2" x-text="g.name"></h2>
+              <div class="space-y-2">
+                <template x-for="i in g.items" :key="i.key">
+                  <div class="flex flex-wrap items-center gap-3 rounded-md border border-slate-800 bg-slate-900 p-2">
+                    <div class="flex-1 min-w-[12rem]">
+                      <label :for="'s-' + i.key" x-text="i.label"></label>
+                      <p class="text-xs text-slate-500" x-show="i.help" x-text="i.help"></p>
+                    </div>
+                    <template x-if="i.type === 'BOOL'"><input type="checkbox" :id="'s-' + i.key" x-model="settingsDraft[i.key]"></template>
+                    <template x-if="i.type === 'INT'"><input type="number" :id="'s-' + i.key" x-model.number="settingsDraft[i.key]" :min="i.min" :max="i.max"
+                           class="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-right"></template>
+                    <span class="text-xs text-slate-500 w-32" x-text="i.type === 'INT' ? 'padrão ' + i.defaultValue + ' (' + i.min + '–' + i.max + ')' : ''"></span>
+                    <button x-show="i.custom" @click="resetAdjustment(i)" class="text-xs text-sky-400 hover:underline">restaurar padrão</button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+          <div class="flex items-center gap-3">
+            <button @click="saveAdjustments()" :disabled="settingsChanged().length === 0" class="rounded-md bg-sky-600 hover:bg-sky-500 px-4 py-1.5 font-medium disabled:opacity-50">Salvar ajustes</button>
+            <span class="text-xs text-slate-500" x-text="settingsChanged().length ? settingsChanged().length + ' alteração(ões) não salva(s)' : ''"></span>
+          </div>
+        </div>
+
+        <!-- Usuários -->
+        <div x-show="settingsTab === 'users'" class="space-y-3 max-w-4xl">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-semibold">Usuários</h2>
+            <button @click="newUser()" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium">+ Usuário</button>
+          </div>
+          <p class="text-xs text-slate-400">ADMIN altera tudo; VIEWER só consulta. A senha definida aqui é provisória: a pessoa a troca no primeiro acesso. Mudar o perfil, desativar, apagar ou redefinir a senha encerra as sessões abertas do usuário.</p>
+          <table class="w-full text-left">
+            <thead class="text-slate-400 border-b border-slate-800"><tr><th class="py-2 pr-3">Usuário</th><th class="pr-3">Perfil</th><th class="pr-3">Estado</th><th></th></tr></thead>
+            <tbody>
+              <template x-for="u in users" :key="u.id">
+                <tr class="border-b border-slate-900" :class="u.enabled ? '' : 'opacity-60'">
+                  <td class="py-2 pr-3"><span x-text="u.username"></span><span x-show="isMe(u)" class="text-xs text-slate-500"> (você)</span>
+                    <span x-show="u.mustChangePassword" class="ml-1 text-xs text-warn">senha provisória</span></td>
+                  <td class="pr-3">
+                    <select :value="u.role" :disabled="isMe(u)" @change="changeUser(u, { role: $event.target.value })" class="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 disabled:opacity-60">
+                      <option value="ADMIN" :selected="u.role === 'ADMIN'">ADMIN</option><option value="VIEWER" :selected="u.role === 'VIEWER'">VIEWER</option>
+                    </select>
+                  </td>
+                  <td class="pr-3" x-text="u.enabled ? 'ativo' : 'desativado'"></td>
+                  <td class="text-right whitespace-nowrap">
+                    <button @click="changeUser(u, { enabled: !u.enabled })" :disabled="isMe(u)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-40" x-text="u.enabled ? 'Desativar' : 'Ativar'"></button>
+                    <button @click="resetUser(u)" :disabled="isMe(u)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800 disabled:opacity-40">Redefinir senha</button>
+                    <button @click="removeUser(u)" :disabled="isMe(u)" class="rounded border border-red-900 text-red-300 px-2 py-1 text-xs hover:bg-red-950 disabled:opacity-40">Apagar</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Backup -->
+        <div x-show="settingsTab === 'backup'" class="space-y-3 max-w-3xl">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-semibold">Backups do banco</h2>
+            <button @click="makeBackup()" :disabled="backupBusy" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium disabled:opacity-50" x-text="backupBusy ? 'Gerando…' : 'Fazer backup agora'"></button>
+          </div>
+          <p class="text-xs text-slate-400">Cópia consistente feita com o serviço no ar e conferida antes de valer. O backup automático diário se liga em "Ajustes e manutenção". As credenciais SNMP e dos canais ficam criptografadas no banco: guarde também a chave (<span class="font-mono">secret.key</span> ou <span class="font-mono">OMNIDUDE_SECRET_KEY</span>), que não vai no backup.</p>
+          <p x-show="backups.length === 0" class="text-slate-500">Nenhum backup ainda.</p>
+          <ul class="space-y-1">
+            <template x-for="b in backups" :key="b.name">
+              <li class="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-900 p-2">
+                <span><span class="font-mono text-xs" x-text="b.name"></span> <span class="text-slate-400 text-xs" x-text="'· ' + sizeText(b.sizeBytes) + ' · ' + fmtTime(b.createdAt)"></span></span>
+                <span class="flex gap-1">
+                  <a :href="'/api/admin/backups/' + encodeURIComponent(b.name)" class="rounded border border-slate-700 px-2 py-1 text-xs hover:bg-slate-800">Baixar</a>
+                  <button @click="removeBackup(b)" class="rounded border border-red-900 text-red-300 px-2 py-1 text-xs hover:bg-red-950">Apagar</button>
+                </span>
+              </li>
+            </template>
+          </ul>
+          <details class="text-xs text-slate-400">
+            <summary class="cursor-pointer text-slate-300">Como restaurar</summary>
+            <ol class="list-decimal pl-5 mt-1 space-y-1">
+              <li>Pare o OmniDude.</li>
+              <li>Guarde o <span class="font-mono">omnidude.db</span> atual (e apague <span class="font-mono">omnidude.db-wal</span> e <span class="font-mono">omnidude.db-shm</span>, se existirem).</li>
+              <li>Copie o backup para o diretório de dados com o nome <span class="font-mono">omnidude.db</span>.</li>
+              <li>Mantenha a mesma chave (<span class="font-mono">secret.key</span>) e inicie o OmniDude.</li>
+            </ol>
+          </details>
+        </div>
+      </section>
+
+      <!-- EVENTOS -->
+      <section x-show="view === 'events'" class="flex-1 min-h-0 overflow-auto p-3">
+        <div class="flex items-center gap-3 mb-3">
+          <select x-model="eventFilter.severity" @change="loadEventList()" class="rounded-md bg-slate-800 border border-slate-700 px-2 py-1">
+            <option value="">Todas as severidades</option>
+            <option value="CRITICAL">Crítico</option><option value="WARNING">Atenção</option><option value="INFO">Informação</option>
+          </select>
+          <label class="flex items-center gap-1"><input type="checkbox" x-model="eventFilter.unacked" @change="loadEventList()"> só não confirmados</label>
+        </div>
+        <ul class="divide-y divide-slate-900">
+          <template x-for="e in eventList" :key="e.id">
+            <li class="flex items-center gap-3 py-2">
+              <span :class="sevClass(e.severity)" x-text="sevGlyph(e.severity)" class="w-5 text-center"></span>
+              <span class="text-slate-400 w-36 shrink-0" x-text="fmt(e.ts)"></span>
+              <button class="flex-1 text-left hover:underline" @click="e.deviceId && openDevice(e.deviceId, true)" x-text="e.message"></button>
+              <template x-if="isAdmin && !e.acknowledged">
+                <button @click="ack(e)" class="rounded-md border border-slate-700 px-2 py-0.5 hover:bg-slate-800">Confirmar</button>
+              </template>
+              <span x-show="e.acknowledged" class="text-slate-500">confirmado</span>
+            </li>
+          </template>
+        </ul>
+        <p x-show="eventList.length === 0" class="py-6 text-slate-500">Nenhum evento.</p>
+      </section>
+
+      <!-- Painel inferior: eventos em tempo real -->
+      <footer class="h-28 shrink-0 bg-slate-900 border-t border-slate-800 overflow-auto px-3 py-1" aria-label="Eventos recentes">
+        <template x-for="e in events.slice(0, 30)" :key="e.id">
+          <button class="w-full flex gap-3 text-left py-0.5 hover:bg-slate-800 rounded" @click="e.deviceId && openDevice(e.deviceId, true)">
+            <span :class="sevClass(e.severity)" x-text="sevGlyph(e.severity)" class="w-4 text-center"></span>
+            <span class="text-slate-500 w-14 shrink-0" x-text="clock(e.ts)"></span>
+            <span class="truncate" x-text="e.message"></span>
+          </button>
+        </template>
+        <p x-show="events.length === 0" class="text-slate-500 py-1">Sem eventos recentes.</p>
+      </footer>
+    </main>
+
+    <!-- Inspetor -->
+    <aside x-show="selected" x-transition class="fixed inset-0 z-20 w-full md:static md:inset-auto md:z-auto md:w-96 shrink-0
+                                                  bg-slate-900 border-l border-slate-800 overflow-auto p-4" aria-label="Inspetor">
+      <template x-if="selected">
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-2">
+            <h2 class="text-base font-semibold break-words" x-text="selected.name"></h2>
+            <button @click="closeDrawer()" class="text-slate-400 hover:text-white" aria-label="Fechar">✕</button>
+          </div>
+          <div x-show="selected.virtualNode" class="text-slate-400" x-text="selected.origin === 'MANUAL' ? 'Nó lógico: sem IP e sem monitoramento' : 'Nó deduzido pela topologia (sem SNMP)'"></div>
+          <div x-show="!selected.virtualNode"><span :class="statusClass(selected.status)" class="font-semibold" x-text="statusGlyph(selected.status) + ' ' + statusText(selected.status)"></span>
+            <span class="text-slate-400" x-text="selected.statusSince ? ' desde ' + since(selected.statusSince) : ''"></span></div>
+
+          <dl class="grid grid-cols-3 gap-y-1">
+            <template x-if="!selected.virtualNode"><dt class="text-slate-400">IP</dt></template>
+            <template x-if="!selected.virtualNode"><dd class="col-span-2 font-mono" x-text="selected.primaryIp"></dd></template>
+            <dt class="text-slate-400">Tipo</dt><dd class="col-span-2" x-text="typeLabel(selected.deviceType)"></dd>
+            <template x-if="selected.macAddress"><dt class="text-slate-400">MAC</dt></template>
+            <template x-if="selected.macAddress"><dd class="col-span-2"><span class="font-mono" x-text="selected.macAddress"></span>
+              <span class="block text-xs text-slate-400" x-show="selected.macVendor" x-text="selected.macVendor"></span>
+              <span class="block text-xs text-slate-500" x-show="selected.macLocal" title="Bit de endereço administrado localmente: MAC aleatório ou virtual; o OUI não identifica o fabricante">MAC aleatório/virtual</span></dd></template>
+            <template x-if="selected.hostname"><dt class="text-slate-400">Host</dt></template>
+            <template x-if="selected.hostname"><dd class="col-span-2" x-text="selected.hostname"></dd></template>
+            <template x-if="!selected.virtualNode"><dt class="text-slate-400">SNMP</dt></template>
+            <template x-if="!selected.virtualNode"><dd class="col-span-2" x-text="profileName(selected.snmpProfileId)"></dd></template>
+            <template x-if="selected.notes"><dt class="text-slate-400">Notas</dt></template>
+            <template x-if="selected.notes"><dd class="col-span-2 whitespace-pre-wrap" x-text="selected.notes"></dd></template>
+          </dl>
+
+          <!-- Serviços -->
+          <div x-show="!selected.virtualNode">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-slate-400">Serviços</h3>
+              <template x-if="isAdmin">
+                <button @click="openCheckForm(null)" class="rounded-md border border-slate-700 px-2 py-0.5 text-xs hover:bg-slate-800">+ Serviço</button>
+              </template>
+            </div>
+            <ul class="space-y-1">
+              <template x-for="c in selected.checks || []" :key="c.id">
+                <li class="rounded-md px-2 py-1.5 cursor-pointer border"
+                    :class="chartCheckId === c.id ? 'border-sky-600 bg-slate-800/60' : 'border-transparent hover:bg-slate-800/40'"
+                    @click="selectCheck(c.id)">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="truncate" :class="c.enabled ? '' : 'opacity-50'">
+                      <span :class="statusClass(c.status)" x-text="statusGlyph(c.status)"></span>
+                      <span x-text="c.name"></span>
+                      <span class="text-slate-500 text-xs" x-text="checkLabel(c)"></span>
+                    </span>
+                    <span class="whitespace-nowrap text-xs">
+                      <span :class="statusClass(c.status)" x-text="c.enabled ? statusText(c.status) : 'PAUSADA'"></span><span class="text-slate-400"
+                        x-text="c.lastResponseMs != null ? ' · ' + c.lastResponseMs + ' ms' : ''"></span>
+                    </span>
+                  </div>
+                  <div x-show="isAdmin" class="flex gap-1 mt-1 text-xs">
+                    <button @click.stop="runCheckNow(c)" :disabled="c.running" class="rounded px-1.5 py-0.5 border border-slate-700 hover:bg-slate-800 disabled:opacity-50"
+                            x-text="c.running ? 'verificando…' : 'Verificar agora'"></button>
+                    <button @click.stop="openCheckForm(c)" class="rounded px-1.5 py-0.5 border border-slate-700 hover:bg-slate-800">Editar</button>
+                    <button @click.stop="removeCheck(c)" class="rounded px-1.5 py-0.5 border border-red-900 text-red-300 hover:bg-red-950">Excluir</button>
+                  </div>
+                </li>
+              </template>
+            </ul>
+            <p x-show="!selected.checks || selected.checks.length === 0" class="text-slate-500 text-xs py-1">Nenhum serviço configurado.</p>
+          </div>
+
+          <!-- Identidade: MACs e IPs anteriores (DHCP) -->
+          <div x-show="!selected.virtualNode">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-slate-400">Identidade <span class="text-slate-500" x-text="'(' + identity.macs.length + ' MAC' + (identity.macs.length === 1 ? '' : 's') + ')'"></span></h3>
+              <button x-show="isAdmin && selected.status === 'DOWN'" @click="locateIp()" :disabled="locating"
+                      class="rounded-md border border-violet-700 text-violet-300 px-2 py-0.5 text-xs hover:bg-violet-950 disabled:opacity-50"
+                      title="Procura o MAC deste dispositivo em outro IP (DHCP)" x-text="locating ? 'Procurando…' : 'Procurar novo IP'"></button>
+            </div>
+            <p x-show="identityMsg" class="text-xs text-slate-300 mb-1" x-text="identityMsg"></p>
+            <ul class="space-y-0.5">
+              <template x-for="m in identity.macs" :key="m.mac">
+                <li class="flex items-center justify-between gap-2 text-xs">
+                  <span class="truncate"><span class="font-mono" x-text="m.mac"></span>
+                    <span class="text-slate-500" x-text="(m.vendor ? ' · ' + m.vendor : '') + ' · ' + sourceText(m.source)"></span>
+                    <span x-show="m.random" class="text-warn" title="MAC aleatório ou virtual: não identifica o dispositivo sozinho">aleatório</span></span>
+                  <button x-show="isAdmin" @click="removeMac(m)" class="text-slate-500 hover:text-red-300" :aria-label="'Remover ' + m.mac">✕</button>
+                </li>
+              </template>
+            </ul>
+            <p x-show="identity.macs.length === 0" class="text-slate-500 text-xs">Nenhum MAC conhecido ainda: ele é aprendido pelo ARP enquanto o dispositivo responde.</p>
+            <form x-show="isAdmin" @submit.prevent="addMac()" class="flex gap-1 mt-1">
+              <input x-model="newMac" placeholder="aa:bb:cc:dd:ee:ff (outra placa)" class="flex-1 rounded bg-slate-800 border border-slate-700 px-2 py-1 text-xs font-mono">
+              <button class="rounded border border-slate-700 px-2 text-xs hover:bg-slate-800">Adicionar</button>
+            </form>
+            <details x-show="identity.history.length > 0" class="mt-2 text-xs text-slate-400">
+              <summary class="cursor-pointer" x-text="'IPs anteriores (' + identity.history.length + ')'"></summary>
+              <ul class="mt-1 space-y-0.5">
+                <template x-for="h in identity.history" :key="h.changedAt + h.newIp">
+                  <li><span class="font-mono" x-text="h.oldIp + ' → ' + h.newIp"></span> <span class="text-slate-500" x-text="'· ' + fmtTime(h.changedAt) + ' · ' + reasonText(h.reason)"></span></li>
+                </template>
+              </ul>
+            </details>
+          </div>
+
+          <!-- Interfaces (IF-MIB) -->
+          <div x-show="!selected.virtualNode">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-slate-400">Interfaces <span class="text-slate-500" x-text="'(' + ifaces.length + ')'"></span></h3>
+              <template x-if="isAdmin && selected.snmpProfileId">
+                <div class="flex gap-1">
+                  <button @click="refreshViaSnmp()" :disabled="ifaceBusy" class="rounded-md border border-slate-700 px-2 py-0.5 text-xs hover:bg-slate-800 disabled:opacity-50">Ler via SNMP</button>
+                  <button @click="readLldp()" :disabled="ifaceBusy" class="rounded-md border border-slate-700 px-2 py-0.5 text-xs hover:bg-slate-800 disabled:opacity-50">Vizinhos</button>
+                </div>
+              </template>
+            </div>
+            <ul class="max-h-56 overflow-auto space-y-1">
+              <template x-for="i in ifaces" :key="i.id">
+                <li class="text-xs">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="truncate">
+                      <span :class="i.operStatus === 1 ? 'text-up' : (i.operStatus === 2 ? 'text-down' : 'text-unknown')"
+                            :title="i.operStatus === 1 ? 'up' : (i.operStatus === 2 ? 'down' : 'desconhecido')"
+                            x-text="i.operStatus === 1 ? '●' : (i.operStatus === 2 ? '○' : '◌')"></span>
+                      <span x-text="i.name"></span>
+                      <span class="text-slate-500" x-text="speedText(i.speedBps)"></span>
+                    </span>
+                    <label class="flex items-center gap-1 text-slate-400 whitespace-nowrap" title="Coletar o tráfego desta interface">
+                      <input type="checkbox" :checked="i.monitored" :disabled="!isAdmin" @change="toggleMonitored(i, $event.target.checked)"> monitorar
+                    </label>
+                  </div>
+                  <div x-show="i.monitored" class="flex items-center justify-between gap-2 pl-4 text-slate-400">
+                    <span class="font-mono" title="↓ entrada · ↑ saída" x-text="rateText(i)"></span>
+                    <button type="button" @click="openTraffic(i)" class="rounded px-1.5 py-0.5 text-xs border border-slate-700 hover:bg-slate-800"
+                            :class="trafficIface && trafficIface.id === i.id ? 'bg-slate-700 text-white' : ''">gráfico</button>
+                  </div>
+                </li>
+              </template>
+            </ul>
+            <p x-show="ifaces.length === 0" class="text-slate-500 text-xs py-1">Nenhuma interface lida<span x-show="selected.snmpProfileId"> — use "Ler via SNMP"</span><span x-show="!selected.snmpProfileId"> — associe um perfil SNMP ao dispositivo</span>.</p>
+          </div>
+
+          <!-- Gráfico de tráfego da interface escolhida -->
+          <div x-show="trafficIface">
+            <div class="flex flex-wrap items-center justify-between mb-1 gap-x-2 gap-y-1">
+              <h3 class="text-slate-400">Tráfego <span class="text-slate-500" x-text="trafficIface ? '· ' + trafficIface.name : ''"></span></h3>
+              <div class="flex flex-wrap gap-1 items-center">
+                <template x-for="r in ['1h', '6h', '24h', '7d', '30d', '90d']" :key="r">
+                  <button @click="setTrafficRange(r)" :class="trafficRange === r ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'"
+                          class="rounded px-2 py-0.5 text-xs" x-text="r"></button>
+                </template>
+                <button @click="closeTraffic()" class="rounded px-1.5 py-0.5 text-xs text-slate-400 hover:bg-slate-800" title="Fechar gráfico" aria-label="Fechar gráfico de tráfego">✕</button>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-1" x-show="trafficStats && !trafficEmpty" x-text="trafficStatsText()"></p>
+            <div id="traffic-chart-host" class="w-full" x-show="!trafficEmpty"></div>
+            <p x-show="trafficEmpty" class="text-slate-500 text-xs py-3">Ainda sem taxas neste período (a taxa precisa de duas leituras seguidas).</p>
+          </div>
+
+          <!-- Gráfico de latência -->
+          <div x-show="chartCheckId">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-slate-400">Latência <span class="text-slate-500" x-text="chartCheckName()"></span></h3>
+              <div class="flex gap-1">
+                <template x-for="r in ['1h', '6h', '24h', '7d', '30d']" :key="r">
+                  <button @click="setRange(r)" :class="chartRange === r ? 'bg-slate-700 text-white' : 'text-slate-400 hover:bg-slate-800'"
+                          class="rounded px-2 py-0.5 text-xs" x-text="r"></button>
+                </template>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-1" x-show="chartStats && !chartEmpty" x-text="statsText()"></p>
+            <div id="chart-host" class="w-full" x-show="!chartEmpty"></div>
+            <p x-show="chartEmpty" class="text-slate-500 text-xs py-3">Ainda sem amostras neste período.</p>
+          </div>
+
+          <template x-if="isAdmin">
+            <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-800">
+              <button @click="openDeviceForm(selected)" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800">Editar dispositivo</button>
+              <button @click="startLinkFrom(selected.id)" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800" title="Cria um enlace manual a partir deste dispositivo">Ligar a…</button>
+              <button @click="togglePin()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800"
+                      x-text="pinned ? 'Soltar posição' : 'Fixar posição'"></button>
+              <button @click="toggleEnabled()" class="rounded-md border border-slate-700 px-2 py-1 hover:bg-slate-800"
+                      x-text="selected.enabled ? 'Pausar monitoramento' : 'Retomar'"></button>
+              <button @click="removeSelected()" class="rounded-md border border-red-800 text-red-300 px-2 py-1 hover:bg-red-950">Excluir</button>
+            </div>
+          </template>
+        </div>
+      </template>
+    </aside>
+  </div>
+
+  <!-- Modal: dispositivo (novo/editar) -->
+  <div x-show="showDevice" class="fixed inset-0 z-30 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveDevice()" class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold" x-text="df.id ? 'Editar dispositivo' : 'Novo dispositivo'"></h2>
+      <label class="block">Nome
+        <input x-model="df.name" required maxlength="100" x-ref="deviceName" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <label class="flex items-start gap-2 text-sm" x-show="!df.id">
+        <input type="checkbox" x-model="df.logical" @change="if (df.logical && df.deviceType === 'ROUTER') df.deviceType = 'CLOUD'" class="mt-1">
+        <span>Nó lógico, sem IP e sem monitoramento<span class="block text-xs text-slate-400">Para Internet, VPN, nuvem ou um serviço externo: aparece no mapa e recebe enlaces manuais.</span></span>
+      </label>
+      <p x-show="df.virtualNode" class="text-xs text-slate-400">Nó sem IP (deduzido pela topologia ou lógico): só o nome, o tipo e as notas podem mudar.</p>
+      <label class="block" x-show="!df.virtualNode && !df.logical">Endereço IP
+        <input x-model="df.primaryIp" :required="!df.virtualNode && !df.logical" placeholder="192.168.1.1" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+      </label>
+      <label class="block">Tipo
+        <select x-model="df.deviceType" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          <template x-for="(label, key) in typeLabels" :key="key"><option :value="key" x-text="label"></option></template>
+        </select>
+      </label>
+      <label class="block" x-show="!df.virtualNode && !df.logical">Nome de host (opcional)
+        <input x-model="df.hostname" maxlength="255" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <label class="block" x-show="!df.virtualNode && !df.logical">Perfil SNMP
+        <div class="flex gap-2 mt-1">
+          <select x-model="df.snmpProfileId" class="flex-1 rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+            <option value="">(nenhum)</option>
+            <template x-for="p in profiles" :key="p.id"><option :value="String(p.id)" :selected="String(p.id) === df.snmpProfileId" x-text="p.name + ' · v' + p.version"></option></template>
+          </select>
+          <button type="button" @click="openProfiles()" class="rounded-md border border-slate-700 px-2 hover:bg-slate-800">Perfis…</button>
+        </div>
+      </label>
+      <label class="block">Notas
+        <textarea x-model="df.notes" rows="2" maxlength="2000" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"></textarea>
+      </label>
+      <p class="text-red-400" role="alert" x-text="dfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showDevice = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium" x-text="df.id ? 'Salvar' : 'Adicionar'"></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: serviço (checagem) -->
+  <div x-show="showCheck" class="fixed inset-0 z-30 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveCheck()" class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold" x-text="cf.id ? 'Editar serviço' : 'Novo serviço'"></h2>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block">Tipo
+          <select x-model="cf.type" @change="onCheckTypeChange()" :disabled="!!cf.id" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 disabled:opacity-60">
+            <template x-for="t in availableCheckTypes()" :key="t"><option :value="t" x-text="checkTypes[t].label"></option></template>
+          </select>
+        </label>
+        <label class="block">Nome
+          <input x-model="cf.name" maxlength="100" placeholder="(automático)" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+      </div>
+
+      <label class="block" x-show="cf.type !== 'ICMP'">Porta
+        <input type="number" min="1" max="65535" x-model.number="cf.port" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+      </label>
+
+      <!-- HTTP / HTTPS -->
+      <div x-show="cf.type === 'HTTP' || cf.type === 'HTTPS'" class="space-y-3">
+        <div class="grid grid-cols-3 gap-3">
+          <label class="block col-span-2">Caminho
+            <input x-model="cf.path" placeholder="/" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+          </label>
+          <label class="block">Método
+            <select x-model="cf.method" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"><option>GET</option><option>HEAD</option></select>
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">Status aceitos
+            <input x-model="cf.expectedStatus" placeholder="200-399" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+          </label>
+          <label class="block">Deve conter
+            <input x-model="cf.contains" :disabled="cf.method === 'HEAD'" maxlength="100" placeholder="(opcional)" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 disabled:opacity-50">
+          </label>
+        </div>
+        <label class="flex items-center gap-2" x-show="cf.type === 'HTTPS'">
+          <input type="checkbox" x-model="cf.verifyTls"> Verificar o certificado TLS
+        </label>
+        <p class="text-xs text-slate-500">Redirecionamentos não são seguidos: avalia-se a resposta do próprio serviço.</p>
+      </div>
+
+      <!-- DNS -->
+      <div x-show="cf.type === 'DNS'" class="grid grid-cols-3 gap-3">
+        <label class="block col-span-2">Nome consultado
+          <input x-model="cf.dnsName" placeholder="example.com" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+        </label>
+        <label class="block">Registro
+          <select x-model="cf.recordType" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+            <template x-for="t in ['A', 'AAAA', 'MX', 'NS', 'TXT', 'CNAME']" :key="t"><option x-text="t"></option></template>
+          </select>
+        </label>
+        <p class="col-span-3 text-xs text-slate-500">O dispositivo é consultado como servidor DNS; a resposta precisa ser NOERROR com ao menos um registro.</p>
+      </div>
+
+      <!-- SNMP -->
+      <div x-show="cf.type === 'SNMP'" class="rounded-md border border-slate-700 p-3 text-xs">
+        <template x-if="selected && selected.snmpProfileId">
+          <p>Usa o perfil <b x-text="profileName(selected.snmpProfileId)"></b> do dispositivo (consulta <span class="font-mono">sysUpTime</span>).</p>
+        </template>
+        <template x-if="selected && !selected.snmpProfileId">
+          <p class="text-warn">Este dispositivo ainda não tem perfil SNMP. Feche, use <b>Editar dispositivo</b> e escolha um perfil.</p>
+        </template>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <label class="block">Intervalo (s)
+          <input type="number" min="5" max="86400" x-model.number="cf.intervalS" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block">Timeout (ms)
+          <input type="number" min="200" max="30000" x-model.number="cf.timeoutMs" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block" title="Acima disso o serviço fica em ATENÇÃO">Lat. limite (ms)
+          <input type="number" min="1" max="30000" x-model="cf.warnLatencyMs" placeholder="(sem)" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block" title="Falhas seguidas até ficar DOWN">Falhas p/ DOWN
+          <input type="number" min="1" max="20" x-model.number="cf.failThreshold" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block" title="Sucessos seguidos para voltar a UP">Sucessos p/ UP
+          <input type="number" min="1" max="20" x-model.number="cf.recoverThreshold" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="flex items-end gap-2 pb-2"><input type="checkbox" x-model="cf.enabled"> Ativo</label>
+      </div>
+
+      <p class="text-red-400" role="alert" x-text="cfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showCheck = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button :disabled="cfBusy" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium disabled:opacity-60" x-text="cf.id ? 'Salvar' : 'Adicionar'"></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: enlace -->
+  <div x-show="showLink" class="fixed inset-0 z-30 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveLink()" class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold" x-text="lf.id ? 'Enlace' : 'Novo enlace'"></h2>
+      <p x-show="lf.id" class="text-slate-300"><b x-text="deviceName(lf.sourceDeviceId)"></b> <span class="text-slate-500">⇄</span> <b x-text="deviceName(lf.targetDeviceId)"></b></p>
+      <div x-show="!lf.id" class="grid grid-cols-2 gap-3">
+        <label class="block">Origem
+          <select @change="pickLinkDevice('source', $event.target.value)" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+            <option value="" :selected="!lf.sourceDeviceId">(escolha)</option>
+            <template x-for="d in devices" :key="d.id"><option :value="String(d.id)" :selected="d.id === lf.sourceDeviceId" x-text="d.name + (d.virtualNode ? ' ☁' : '')"></option></template>
+          </select>
+        </label>
+        <label class="block">Destino
+          <select @change="pickLinkDevice('target', $event.target.value)" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+            <option value="" :selected="!lf.targetDeviceId">(escolha)</option>
+            <template x-for="d in devices" :key="d.id"><option :value="String(d.id)" :selected="d.id === lf.targetDeviceId" x-text="d.name + (d.virtualNode ? ' ☁' : '')"></option></template>
+          </select>
+        </label>
+      </div>
+      <p x-show="lf.id" class="text-xs" :class="lf.state === 'SUGGESTED' ? 'text-violet-300' : 'text-slate-400'"
+         x-text="(lf.state === 'SUGGESTED' ? 'Sugerido' : 'Confirmado') + ' · origem: ' + originText(lf.origin)"></p>
+      <p x-show="lf.evidence" class="text-xs text-slate-400 whitespace-pre-wrap" x-text="lf.evidence"></p>
+      <p x-show="lf.traffic" class="text-xs text-slate-300" x-text="linkTrafficText(lf)"></p>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block"><span x-text="'Interface em ' + deviceName(lf.sourceDeviceId)" class="block truncate"></span>
+          <select x-model="lf.sourceInterfaceId" :disabled="!isAdmin" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+            <option value="">(não informar)</option>
+            <template x-for="i in lfIfs.source" :key="i.id"><option :value="String(i.id)" :selected="String(i.id) === lf.sourceInterfaceId" x-text="i.name + (i.speedBps ? ' · ' + speedText(i.speedBps) : '')"></option></template>
+          </select>
+        </label>
+        <label class="block"><span x-text="'Interface em ' + deviceName(lf.targetDeviceId)" class="block truncate"></span>
+          <select x-model="lf.targetInterfaceId" :disabled="!isAdmin" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+            <option value="">(não informar)</option>
+            <template x-for="i in lfIfs.target" :key="i.id"><option :value="String(i.id)" :selected="String(i.id) === lf.targetInterfaceId" x-text="i.name + (i.speedBps ? ' · ' + speedText(i.speedBps) : '')"></option></template>
+          </select>
+        </label>
+      </div>
+      <label class="block">Tipo do enlace
+        <select x-model="lf.kind" :disabled="!isAdmin" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+          <option value="" :selected="!lf.kind">(não informar)</option>
+          <template x-for="(label, key) in linkKinds" :key="key"><option :value="key" :selected="key === lf.kind" x-text="label"></option></template>
+        </select>
+      </label>
+      <label class="block">Rótulo (opcional)
+        <input x-model="lf.label" maxlength="100" :disabled="!isAdmin" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <p class="text-red-400" role="alert" x-text="lfError"></p>
+      <div class="flex flex-wrap justify-end gap-2">
+        <button type="button" x-show="isAdmin && lf.id" @click="deleteLink()" class="mr-auto rounded-md border border-red-800 text-red-300 px-3 py-1.5 hover:bg-red-950"
+                x-text="lf.state === 'SUGGESTED' ? 'Descartar' : 'Excluir'"></button>
+        <button type="button" @click="showLink = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Fechar</button>
+        <button type="button" x-show="isAdmin && lf.id && lf.state === 'SUGGESTED'" @click="confirmLink()" class="rounded-md bg-violet-600 hover:bg-violet-500 px-3 py-1.5 font-medium">Confirmar</button>
+        <button x-show="isAdmin" class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium" x-text="lf.id ? 'Salvar' : 'Criar'"></button>
+      </div>
+      <p x-show="lf.id && lf.state === 'SUGGESTED'" class="text-xs text-slate-500">Descartar uma sugestão a rejeita: ela não volta no próximo "Detectar enlaces".</p>
+    </form>
+  </div>
+
+  <!-- Modal: canal de notificação -->
+  <div x-show="showChannel" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveChannel()" class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold" x-text="chf.id ? 'Editar canal' : 'Novo canal'"></h2>
+      <div class="grid grid-cols-3 gap-3">
+        <label class="block col-span-2">Nome
+          <input x-model="chf.name" required maxlength="80" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block">Tipo
+          <select x-model="chf.type" :disabled="!!chf.id" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2 disabled:opacity-60">
+            <option value="WEBHOOK" :selected="chf.type === 'WEBHOOK'">Webhook</option><option value="TELEGRAM" :selected="chf.type === 'TELEGRAM'">Telegram</option><option value="EMAIL" :selected="chf.type === 'EMAIL'">E-mail</option>
+          </select>
+        </label>
+      </div>
+
+      <div x-show="chf.type === 'WEBHOOK'" class="space-y-3">
+        <label class="block">URL
+          <input x-model="chf.config.url" placeholder="https://exemplo.com/omnidude" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-xs">
+        </label>
+        <label class="block">Segredo de assinatura (opcional)
+          <input type="password" x-model="chf.config.secret" autocomplete="off" :placeholder="chf.secrets.secret ? '(vazio mantém o atual)' : 'HMAC-SHA256 em X-OmniDude-Signature'" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+      </div>
+
+      <div x-show="chf.type === 'TELEGRAM'" class="space-y-3">
+        <label class="block">Token do bot
+          <input type="password" x-model="chf.config.botToken" autocomplete="off" :placeholder="chf.secrets.botToken ? '(vazio mantém o atual)' : '123456:ABC…'" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <label class="block">Chat (id numérico ou @canal)
+          <input x-model="chf.config.chatId" placeholder="-1001234567890" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono">
+        </label>
+        <label class="block">Endereço da API (opcional)
+          <input x-model="chf.config.apiBase" placeholder="https://api.telegram.org" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-xs">
+        </label>
+      </div>
+
+      <div x-show="chf.type === 'EMAIL'" class="space-y-3">
+        <div class="grid grid-cols-3 gap-3">
+          <label class="block col-span-2">Servidor SMTP
+            <input x-model="chf.config.host" placeholder="smtp.exemplo.com" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          </label>
+          <label class="block">Porta
+            <input x-model="chf.config.port" placeholder="587" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          </label>
+        </div>
+        <label class="block">Segurança
+          <select x-model="chf.config.security" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+            <option value="STARTTLS" :selected="chf.config.security === 'STARTTLS'">STARTTLS (587)</option><option value="SSL" :selected="chf.config.security === 'SSL'">SSL/TLS (465)</option><option value="NONE" :selected="chf.config.security === 'NONE'">Nenhuma (25)</option>
+          </select>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">Remetente<input x-model="chf.config.from" placeholder="omnidude@exemplo.com" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"></label>
+          <label class="block">Destinatários<input x-model="chf.config.to" placeholder="ops@exemplo.com, noc@exemplo.com" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"></label>
+          <label class="block">Usuário (opcional)<input x-model="chf.config.username" autocomplete="off" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"></label>
+          <label class="block">Senha<input type="password" x-model="chf.config.password" autocomplete="off" :placeholder="chf.secrets.password ? '(vazio mantém a atual)' : ''" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"></label>
+        </div>
+      </div>
+
+      <label class="flex items-center gap-2"><input type="checkbox" x-model="chf.enabled"> Canal ligado</label>
+      <p class="text-xs text-slate-500">Os segredos são guardados criptografados e nunca são exibidos de volta. Use "Testar" na lista para conferir o canal.</p>
+      <p class="text-red-400" role="alert" x-text="chfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showChannel = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium" x-text="chf.id ? 'Salvar' : 'Criar'"></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: regra de notificação -->
+  <div x-show="showRule" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveRule()" class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold" x-text="rlf.id ? 'Editar regra' : 'Nova regra'"></h2>
+      <label class="block">Canal
+        <select x-model="rlf.channelId" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+          <template x-for="c in channels" :key="c.id"><option :value="String(c.id)" :selected="String(c.id) === rlf.channelId" x-text="c.name + ' · ' + channelTypeLabel(c.type)"></option></template>
+        </select>
+      </label>
+      <label class="block">Gravidade mínima
+        <select x-model="rlf.minSeverity" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+          <option value="INFO" :selected="rlf.minSeverity === 'INFO'">Qualquer (informativo ou pior)</option>
+          <option value="WARNING" :selected="rlf.minSeverity === 'WARNING'">Atenção ou pior</option>
+          <option value="CRITICAL" :selected="rlf.minSeverity === 'CRITICAL'">Só críticos</option>
+        </select>
+      </label>
+      <fieldset>
+        <legend class="mb-1">Tipos de evento <span class="text-xs text-slate-500">(nenhum marcado = todos)</span></legend>
+        <div class="grid grid-cols-2 gap-1">
+          <template x-for="(label, key) in eventTypeLabels" :key="key">
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" :value="key" x-model="rlf.eventTypes"> <span x-text="label"></span></label>
+          </template>
+        </div>
+      </fieldset>
+      <label class="block">Dispositivo
+        <select x-model="rlf.deviceId" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+          <option value="" :selected="!rlf.deviceId">Todos os dispositivos</option>
+          <template x-for="d in devices.filter((x) => !x.virtualNode)" :key="d.id"><option :value="String(d.id)" :selected="String(d.id) === rlf.deviceId" x-text="d.name"></option></template>
+        </select>
+      </label>
+      <label class="flex items-start gap-2"><input type="checkbox" x-model="rlf.includeRecovery" class="mt-1">
+        <span>Avisar também da recuperação<span class="block text-xs text-slate-400">"Voltou" é informativo; com isto ligado ele segue o filtro de tipo e de dispositivo, não o de gravidade.</span></span></label>
+      <label class="flex items-center gap-2"><input type="checkbox" x-model="rlf.enabled"> Regra ligada</label>
+      <p class="text-red-400" role="alert" x-text="rlfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showRule = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium" x-text="rlf.id ? 'Salvar' : 'Criar'"></button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: novo usuário -->
+  <div x-show="showUser" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveUser()" class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3">
+      <h2 class="text-base font-semibold">Novo usuário</h2>
+      <label class="block">Usuário
+        <input x-model="usf.username" required minlength="3" maxlength="40" autocomplete="off" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <label class="block">Senha provisória (mín. 10 caracteres)
+        <input type="password" x-model="usf.password" required minlength="10" autocomplete="new-password" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <label class="block">Perfil
+        <select x-model="usf.role" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-2">
+          <option value="VIEWER" :selected="usf.role === 'VIEWER'">VIEWER (só consulta)</option><option value="ADMIN" :selected="usf.role === 'ADMIN'">ADMIN (altera tudo)</option>
+        </select>
+      </label>
+      <p class="text-red-400" role="alert" x-text="usfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showUser = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium">Criar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: redefinir senha -->
+  <div x-show="showReset" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <form @submit.prevent="saveReset()" class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3">
+      <h2 class="text-base font-semibold">Redefinir senha de <span x-text="rsf.username"></span></h2>
+      <label class="block">Nova senha provisória (mín. 10 caracteres)
+        <input type="password" x-model="rsf.password" required minlength="10" autocomplete="new-password" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      </label>
+      <p class="text-xs text-slate-500">As sessões abertas dessa pessoa são encerradas e ela terá de trocar a senha ao entrar.</p>
+      <p class="text-red-400" role="alert" x-text="rsfError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showReset = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Cancelar</button>
+        <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium">Redefinir</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: publicar mapa -->
+  <div x-show="showPublish" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold">Publicar mapa <span class="text-slate-400" x-text="currentMapName()"></span></h2>
+      <p class="text-slate-300">Quem tiver o link vê o mapa <b>somente para leitura</b>, sem login: as formas, os enlaces e o que você permitir abaixo.
+        Não vê IPs, MACs, interfaces, tráfego, serviços, eventos nem o menu.</p>
+
+      <div class="space-y-2 border-t border-slate-800 pt-3">
+        <label class="flex items-start gap-2">
+          <input type="checkbox" :checked="pub.showNames" :disabled="pubBusy" @change="savePublish({ showNames: $event.target.checked })" class="mt-1">
+          <span>Mostrar o nome dos dispositivos<span class="block text-xs text-slate-400">Desligado, cada nó mostra só o tipo (Switch, Servidor…).</span></span>
+        </label>
+        <label class="flex items-start gap-2">
+          <input type="checkbox" :checked="pub.showStatus" :disabled="pubBusy" @change="savePublish({ showStatus: $event.target.checked })" class="mt-1">
+          <span>Mostrar o estado (UP, atenção, DOWN)<span class="block text-xs text-slate-400">Desligado, o mapa mostra só a topologia.</span></span>
+        </label>
+      </div>
+
+      <div x-show="pub.published" class="space-y-2 border-t border-slate-800 pt-3">
+        <label class="block">Link público
+          <div class="flex gap-2 mt-1">
+            <input readonly :value="publicUrl()" @focus="$event.target.select()" class="flex-1 rounded-md bg-slate-800 border border-slate-700 px-3 py-2 font-mono text-xs">
+            <button type="button" @click="copyPublicUrl()" class="rounded-md border border-slate-700 px-3 hover:bg-slate-800" x-text="pubCopied ? 'Copiado' : 'Copiar'"></button>
+          </div>
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <a :href="pub.path" target="_blank" rel="noopener" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Abrir</a>
+          <button type="button" @click="regeneratePublish()" :disabled="pubBusy" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800 disabled:opacity-50"
+                  title="O link atual deixa de funcionar">Gerar novo link</button>
+        </div>
+      </div>
+      <p x-show="pub.published && isLoopback()" class="text-xs text-amber-300">Este servidor escuta só em 127.0.0.1 por padrão: o link só abre nesta máquina. Para acesso externo, publique-o atrás de um proxy reverso com HTTPS.</p>
+      <p class="text-xs text-slate-500">Despublicar apaga o link; publicar de novo gera um endereço diferente.</p>
+
+      <p class="text-red-400" role="alert" x-text="pubError"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" @click="showPublish = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Fechar</button>
+        <button type="button" @click="togglePublish()" :disabled="pubBusy"
+                :class="pub.published ? 'border border-red-800 text-red-300 hover:bg-red-950' : 'bg-sky-600 hover:bg-sky-500 font-medium'"
+                class="rounded-md px-3 py-1.5 disabled:opacity-50" x-text="pub.published ? 'Despublicar' : 'Publicar'"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: perfis SNMP -->
+  <div x-show="showProfiles" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3 max-h-full overflow-auto">
+      <h2 class="text-base font-semibold">Perfis SNMP</h2>
+      <ul class="divide-y divide-slate-800">
+        <template x-for="p in profiles" :key="p.id">
+          <li class="flex items-center justify-between gap-2 py-1.5">
+            <span><b x-text="p.name"></b> <span class="text-slate-500" x-text="profileSummary(p)"></span></span>
+            <span class="flex gap-1">
+              <button @click="editProfile(p)" class="rounded px-1.5 py-0.5 border border-slate-700 hover:bg-slate-800 text-xs">Editar</button>
+              <button @click="removeProfile(p)" class="rounded px-1.5 py-0.5 border border-red-900 text-red-300 hover:bg-red-950 text-xs">Excluir</button>
+            </span>
+          </li>
+        </template>
+      </ul>
+      <p x-show="profiles.length === 0" class="text-slate-500">Nenhum perfil cadastrado.</p>
+
+      <form @submit.prevent="saveProfile()" class="space-y-3 border-t border-slate-800 pt-3">
+        <h3 class="text-slate-300" x-text="pf.id ? 'Editar perfil' : 'Novo perfil'"></h3>
+        <div class="grid grid-cols-3 gap-3">
+          <label class="block col-span-2">Nome
+            <input x-model="pf.name" required maxlength="80" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          </label>
+          <label class="block">Versão
+            <select x-model="pf.version" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2"><option value="2c">v2c</option><option value="1">v1</option><option value="3">v3</option></select>
+          </label>
+        </div>
+        <label class="block" x-show="pf.version !== '3'">Community
+          <input type="password" x-model="pf.community" autocomplete="off" :placeholder="pf.id ? '(vazio mantém a atual)' : ''"
+                 class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+        </label>
+        <div class="space-y-3" x-show="pf.version === '3'">
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">Usuário
+              <input x-model="pf.username" maxlength="80" autocomplete="off" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+            </label>
+            <label class="block">Nível de segurança
+              <select x-model="pf.securityLevel" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+                <option value="NO_AUTH_NO_PRIV">Sem autenticação</option>
+                <option value="AUTH_NO_PRIV">Autenticação</option>
+                <option value="AUTH_PRIV">Autenticação + criptografia</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3" x-show="pf.securityLevel !== 'NO_AUTH_NO_PRIV'">
+            <label class="block">Protocolo de autenticação
+              <select x-model="pf.authProtocol" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+                <option value="SHA">SHA (SHA-1)</option><option value="SHA256">SHA-256</option><option value="SHA512">SHA-512</option>
+              </select>
+            </label>
+            <label class="block">Senha de autenticação
+              <input type="password" x-model="pf.authPassword" autocomplete="off" minlength="8" :placeholder="pf.id && pf.hasAuthPassword ? '(vazio mantém a atual)' : 'mín. 8 caracteres'"
+                     class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+            </label>
+          </div>
+          <div class="grid grid-cols-2 gap-3" x-show="pf.securityLevel === 'AUTH_PRIV'">
+            <label class="block">Protocolo de criptografia
+              <select x-model="pf.privProtocol" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+                <option value="AES128">AES-128</option><option value="AES192">AES-192</option><option value="AES256">AES-256</option>
+              </select>
+            </label>
+            <label class="block">Senha de criptografia
+              <input type="password" x-model="pf.privPassword" autocomplete="off" minlength="8" :placeholder="pf.id && pf.hasPrivPassword ? '(vazio mantém a atual)' : 'mín. 8 caracteres'"
+                     class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+            </label>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">Porta
+            <input type="number" min="1" max="65535" x-model.number="pf.port" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          </label>
+          <label class="block">Retentativas
+            <input type="number" min="0" max="5" x-model.number="pf.retries" class="mt-1 w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+          </label>
+        </div>
+        <p class="text-xs text-slate-500">A community e as senhas SNMPv3 são guardadas criptografadas e nunca são exibidas de volta. Prefira v3 com autenticação e criptografia onde o equipamento suportar.</p>
+        <p class="text-red-400" role="alert" x-text="pfError"></p>
+        <div class="flex justify-end gap-2">
+          <button type="button" x-show="pf.id" @click="newProfile()" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Novo</button>
+          <button type="button" @click="showProfiles = false" class="rounded-md border border-slate-700 px-3 py-1.5 hover:bg-slate-800">Fechar</button>
+          <button class="rounded-md bg-sky-600 hover:bg-sky-500 px-3 py-1.5 font-medium" x-text="pf.id ? 'Salvar' : 'Adicionar'"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: troca de senha obrigatória -->
+  <div x-show="mustChange" class="fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4">
+    <form @submit.prevent="changePassword()" class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-xl p-5 space-y-3">
+      <h2 class="text-base font-semibold">Defina uma nova senha</h2>
+      <p class="text-slate-400">A senha provisória precisa ser trocada antes de continuar (mínimo de 10 caracteres).</p>
+      <input type="password" x-model="pwd.current" placeholder="Senha atual" autocomplete="current-password" required class="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      <input type="password" x-model="pwd.next" placeholder="Nova senha" autocomplete="new-password" required minlength="10" class="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      <input type="password" x-model="pwd.confirm" placeholder="Repita a nova senha" autocomplete="new-password" required class="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2">
+      <p class="text-red-400" role="alert" x-text="pwd.error"></p>
+      <button class="w-full rounded-md bg-sky-600 hover:bg-sky-500 py-2 font-medium">Salvar</button>
+    </form>
+  </div>
+
+  <!-- Aviso -->
+  <div x-show="toast" x-transition class="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 rounded-md bg-slate-700 px-4 py-2 shadow-lg" role="status" x-text="toast"></div>
+</div>
+</body>
+</html>

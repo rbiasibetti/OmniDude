@@ -1,0 +1,69 @@
+# Regras de identificação usadas pela descoberta e pelo inventário SNMP. A PRIMEIRA regra que casar vence.
+# Para personalizar, crie "fingerprints.yml" no diretório de dados (OMNIDUDE_DATA_DIR): as regras dele vêm antes.
+#
+# Campos (todos os informados precisam casar):
+#   sysObjectId  prefixo do sysObjectID (limite de componente: 1.3.6.1.4.1.9 casa 1.3.6.1.4.1.9.1.5, não ...91)
+#   sysDescr     expressão regular (sem diferenciar maiúsculas) procurada no sysDescr
+#   ports        casa se QUALQUER uma destas portas TCP estiver aberta (útil para hosts sem SNMP)
+#   banner       expressão regular (sem diferenciar maiúsculas) procurada no que o host anunciou na descoberta:
+#                "NetBIOS: nome (grupo) · UPnP: fabricante modelo [tipo] · mDNS: nome"
+#   vendor       expressão regular (sem diferenciar maiúsculas) procurada no fabricante do MAC (tabela OUI do arp-scan);
+#                só casa se o MAC do host é conhecido (ARP na mesma rede, ou o MAC das interfaces lido por SNMP)
+#   type         ROUTER, SWITCH, FIREWALL, ACCESS_POINT, SERVER, WORKSTATION, PRINTER, STORAGE, CLOUD, NETWORK ou OTHER
+#   os           texto gravado em "Sistema" do dispositivo (opcional)
+rules:
+  # --- firewalls (antes dos genéricos do mesmo fabricante)
+  - {name: Cisco ASA, sysDescr: "Adaptive Security Appliance", type: FIREWALL, os: Cisco ASA}
+  - {name: FortiGate, sysObjectId: 1.3.6.1.4.1.12356, type: FIREWALL, os: FortiOS}
+  - {name: Palo Alto, sysObjectId: 1.3.6.1.4.1.25461, type: FIREWALL, os: PAN-OS}
+  - {name: pfSense/OPNsense, sysDescr: "pfSense|OPNsense", type: FIREWALL, os: FreeBSD (pfSense/OPNsense)}
+
+  # --- roteadores e switches
+  - {name: MikroTik RouterOS, sysObjectId: 1.3.6.1.4.1.14988, type: ROUTER, os: RouterOS}
+  - {name: Cisco switch, sysObjectId: 1.3.6.1.4.1.9, sysDescr: "switch|catalyst|C[0-9]{4}", type: SWITCH, os: Cisco IOS}
+  - {name: Cisco roteador, sysObjectId: 1.3.6.1.4.1.9, type: ROUTER, os: Cisco IOS}
+  - {name: Juniper, sysObjectId: 1.3.6.1.4.1.2636, type: ROUTER, os: Junos}
+  - {name: Ubiquiti, sysObjectId: 1.3.6.1.4.1.41112, type: ACCESS_POINT, os: Ubiquiti}
+  - {name: D-Link, sysDescr: "D-?Link", type: SWITCH}
+  - {name: HP/Aruba switch, sysDescr: "ProCurve|Aruba.*Switch", type: SWITCH, os: ArubaOS-Switch}
+
+  # --- impressoras e storage
+  - {name: HP impressora, sysObjectId: 1.3.6.1.4.1.11.2.3.9, type: PRINTER}
+  - {name: Brother, sysObjectId: 1.3.6.1.4.1.2435, type: PRINTER}
+  - {name: Canon, sysObjectId: 1.3.6.1.4.1.1602, type: PRINTER}
+  - {name: Epson, sysObjectId: 1.3.6.1.4.1.1248, type: PRINTER}
+  - {name: Synology, sysObjectId: 1.3.6.1.4.1.6574, type: STORAGE, os: DSM}
+  - {name: QNAP, sysObjectId: 1.3.6.1.4.1.24681, type: STORAGE, os: QTS}
+
+  # --- fabricante do MAC combinado com o sistema: refina o que o SNMP sozinho não separa
+  - {name: Ubiquiti (Linux), vendor: "Ubiquiti", sysDescr: "^Linux ", type: ACCESS_POINT, os: Ubiquiti}
+  - {name: Synology (Linux), vendor: "Synology", sysDescr: "^Linux ", type: STORAGE, os: DSM}
+  - {name: QNAP (Linux), vendor: "QNAP", sysDescr: "^Linux ", type: STORAGE, os: QTS}
+  - {name: Máquina virtual (Linux), vendor: "VMware|QEMU|Xensource|Parallels", sysDescr: "^Linux ", type: SERVER, os: Linux}
+
+  # --- sistemas operacionais de uso geral
+  - {name: Windows, sysDescr: "Software: Windows", type: WORKSTATION, os: Windows}
+  - {name: Linux, sysDescr: "^Linux ", type: SERVER, os: Linux}
+
+  # --- sem SNMP: pelo que o host anunciou (UPnP, NetBIOS)
+  - {name: Roteador (UPnP), banner: "InternetGatewayDevice", type: ROUTER}
+  - {name: Impressora (UPnP), banner: "\\[Printer\\]", type: PRINTER}
+  - {name: Windows ou Samba (NetBIOS), banner: "NetBIOS:", type: WORKSTATION, os: Windows/Samba}
+
+  # --- sem SNMP: só pelas portas abertas
+  - {name: Windows (RDP), ports: [3389], type: WORKSTATION, os: Windows}
+  - {name: Impressora (JetDirect/IPP/LPD), ports: [9100, 631, 515], type: PRINTER}
+
+  # --- último recurso: só o fabricante do MAC (palpite fraco; por isso vem depois de todo o resto)
+  # Só entram fabricantes cujo equipamento é quase sempre do mesmo tipo.
+  - {name: MikroTik (fabricante), vendor: "MikroTik|Routerboard", type: ROUTER, os: RouterOS}
+  - {name: Fortinet (fabricante), vendor: "Fortinet", type: FIREWALL}
+  - {name: Palo Alto (fabricante), vendor: "Palo Alto Networks", type: FIREWALL}
+  - {name: SonicWall (fabricante), vendor: "SonicWall|SonicWALL", type: FIREWALL}
+  - {name: Juniper (fabricante), vendor: "Juniper", type: ROUTER}
+  - {name: Ubiquiti (fabricante), vendor: "Ubiquiti", type: ACCESS_POINT}
+  - {name: Ruckus (fabricante), vendor: "Ruckus", type: ACCESS_POINT}
+  - {name: Cisco (fabricante), vendor: "Cisco Systems", type: SWITCH}
+  - {name: Impressora (fabricante), vendor: "Brother Industries|Lexmark|Kyocera|Konica Minolta|Ricoh|Xerox|Seiko Epson|SEIKO EPSON|Canon Inc", type: PRINTER}
+  - {name: Storage (fabricante), vendor: "Synology|QNAP", type: STORAGE}
+  - {name: Servidor (fabricante), vendor: "Super Micro Computer|Supermicro|VMware|QEMU|Xensource|Parallels", type: SERVER}

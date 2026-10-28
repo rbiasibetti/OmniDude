@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR" data-layout="page">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segurança · Manual do OmniDude</title>
+<meta name="description" content="O que o OmniDude faz por padrão, como publicá-lo com segurança, os riscos aceitos e como relatar uma vulnerabilidade.">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/manual.css">
+<script>try{var t=localStorage.getItem("omnidude-manual-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body>
+<a class="skip" href="#conteudo">Ir para o conteúdo</a>
+<header class="topbar">
+  <button class="icon-btn menu-btn" type="button" aria-label="Abrir o menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+  <a class="brand" href="index.html"><img src="assets/favicon.svg" alt="" width="24" height="24"><span>OmniDude <em>manual</em></span></a>
+  <div class="search" role="search">
+    <input id="busca" type="search" placeholder="Buscar no manual…  ( / )" autocomplete="off" aria-label="Buscar no manual" aria-controls="resultados">
+    <div id="resultados" class="results" hidden></div>
+  </div>
+  <button class="icon-btn theme-btn" type="button" aria-label="Alternar tema claro/escuro" title="Alternar tema">◐</button>
+</header>
+<div class="shell">
+  <nav id="sidebar" class="sidebar" aria-label="Capítulos">
+<a class="nav-home" href="index.html">Início do manual</a>
+<div class="nav-group"><h3>Começando</h3><ul>
+<li><a href="introducao.html"><span class="n">01</span>Introdução</a></li>
+<li><a href="instalacao.html"><span class="n">02</span>Instalação</a></li>
+<li><a href="primeiros-passos.html"><span class="n">03</span>Primeiros passos</a></li>
+</ul></div>
+<div class="nav-group"><h3>Usando</h3><ul>
+<li><a href="mapa.html"><span class="n">04</span>Mapa e dispositivos</a></li>
+<li><a href="checagens.html"><span class="n">05</span>Checagens e latência</a></li>
+<li><a href="snmp-trafego.html"><span class="n">06</span>SNMP, interfaces e tráfego</a></li>
+<li><a href="descoberta.html"><span class="n">07</span>Descoberta de rede</a></li>
+<li><a href="topologia.html"><span class="n">08</span>Topologia e enlaces</a></li>
+<li><a href="identidade.html"><span class="n">09</span>Identidade estável com DHCP</a></li>
+<li><a href="eventos-notificacoes.html"><span class="n">10</span>Eventos e notificações</a></li>
+<li><a href="mapa-publico.html"><span class="n">11</span>Mapa público</a></li>
+</ul></div>
+<div class="nav-group"><h3>Administração</h3><ul>
+<li><a href="administracao.html"><span class="n">12</span>Administração</a></li>
+<li><a class="current" aria-current="page" href="seguranca.html"><span class="n">13</span>Segurança</a></li>
+</ul></div>
+<div class="nav-group"><h3>Referência</h3><ul>
+<li><a href="api.html"><span class="n">14</span>API REST</a></li>
+<li><a href="problemas.html"><span class="n">15</span>Solução de problemas</a></li>
+<li><a href="referencia.html"><span class="n">16</span>Referência e glossário</a></li>
+</ul></div>
+  </nav>
+  <div class="scrim" hidden></div>
+  <main id="conteudo" class="content" tabindex="-1">
+<header class="page-head"><p class="eyebrow">Administração · capítulo 13</p><h1>Segurança</h1><p class="lead">O que o OmniDude faz por padrão, como publicá-lo com segurança, os riscos aceitos e como relatar uma vulnerabilidade.</p></header>
+<article class="prose">
+<p>Este capítulo resume a revisão de segurança da versão atual. O relatório completo, com a lista de achados, está no arquivo <code>SEGURANCA.md</code> do repositório.</p>
+
+<h2 id="padroes-seguros">Padrões seguros<a class="anchor" href="#padroes-seguros" aria-label="Link para esta seção">#</a></h2>
+<table>
+  <thead><tr><th>Área</th><th>O que é feito</th></tr></thead>
+  <tbody>
+    <tr><td>Rede</td><td>Escuta só em <code>127.0.0.1</code>. Um aviso aparece no log se você expõe sem TLS nem proxy.</td></tr>
+    <tr><td>Senhas</td><td>BCrypt; troca obrigatória no primeiro acesso quando a senha inicial é gerada.</td></tr>
+    <tr><td>Login</td><td>Bloqueio de 5 minutos após 5 falhas por usuário <em>e</em> origem, com limite total por usuário e expiração; um terceiro não consegue trancar o <code>admin</code>.</td></tr>
+    <tr><td>Sessão</td><td>Cookie <code>HttpOnly</code> e <code>SameSite=Strict</code> (e <code>Secure</code> com <code>OMNIDUDE_COOKIE_SECURE=true</code>).</td></tr>
+    <tr><td>CSRF</td><td>Token em cookie (<code>XSRF-TOKEN</code>), enviado em <code>X-XSRF-TOKEN</code> em toda escrita.</td></tr>
+    <tr><td>Autorização</td><td>ADMIN e VIEWER aplicados no <em>servidor</em>. Um teste varre todas as rotas a cada build.</td></tr>
+    <tr><td>Segredos</td><td>Credenciais SNMP, SMTP e tokens cifrados com AES-256-GCM; nunca voltam pela API nem aparecem em logs.</td></tr>
+    <tr><td>Arquivos</td><td>Diretório de dados 700; banco, chave e backups 600, reaplicados a cada início.</td></tr>
+    <tr><td>Cabeçalhos</td><td>CSP restritiva, <code>Referrer-Policy: no-referrer</code>, <code>Permissions-Policy</code>, <code>X-Frame-Options: DENY</code>, HSTS em HTTPS.</td></tr>
+    <tr><td>Varredura</td><td>Exige confirmação explícita, recusa redes públicas e limita taxa, concorrência e tamanho.</td></tr>
+    <tr><td>Tempo real</td><td>No máximo 500 conexões SSE simultâneas.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="lista-de-verificacao-para-producao">Lista de verificação para produção<a class="anchor" href="#lista-de-verificacao-para-producao" aria-label="Link para esta seção">#</a></h2>
+<ol class="steps">
+  <li><strong>Instale pelo systemd</strong> (<code>packaging/install.sh</code>): usuário sem privilégios, dados privados e sistema de arquivos somente leitura (<a href="instalacao.html">Instalação</a>).</li>
+  <li><strong>Mantenha o bind em <code>127.0.0.1</code></strong> e publique por um proxy reverso com HTTPS na mesma máquina.</li>
+  <li><strong>Configure o proxy:</strong> <code>OMNIDUDE_FORWARD_HEADERS=native</code> e <code>OMNIDUDE_COOKIE_SECURE=true</code>; se o proxy for remoto, <code>OMNIDUDE_TRUSTED_PROXIES</code>. O proxy deve <em>substituir</em> <code>X-Forwarded-For</code> e <code>X-Forwarded-Proto</code>.</li>
+  <li><strong>Defina</strong> <code>OMNIDUDE_ADMIN_PASSWORD</code> (e troque-a depois) ou troque logo a senha gerada.</li>
+  <li><strong>Guarde a chave de criptografia</strong> à parte e copie os backups para fora da máquina.</li>
+  <li><strong>Use SNMPv3 <code>authPriv</code></strong> e contas <em>somente leitura</em> nos equipamentos.</li>
+  <li><strong>Dê o perfil ADMIN</strong> só a quem precisa; use VIEWER para o resto.</li>
+  <li><strong>Atualize</strong> o OmniDude e as dependências a cada release.</li>
+</ol>
+<div class="warn"><p><strong>Nunca</strong> use <code>OMNIDUDE_FORWARD_HEADERS=framework</code> nem exponha a porta 8080 diretamente à Internet. A interface inteira (inclusive a API) exige login, mas o HTTP puro trafega senhas e cookies sem proteção.</p></div>
+
+<h2 id="riscos-aceitos">Riscos aceitos<a class="anchor" href="#riscos-aceitos" aria-label="Link para esta seção">#</a></h2>
+<p>Pontos conhecidos que foram avaliados e mantidos, com a mitigação recomendada:</p>
+<table>
+  <thead><tr><th>Risco</th><th>Mitigação</th></tr></thead>
+  <tbody>
+    <tr><td>A CSP precisa de <code>'unsafe-eval'</code>: a versão padrão do Alpine.js avalia expressões com <code>new Function</code></td><td>Não há conteúdo de terceiros nem <code>innerHTML</code> com dados do usuário.</td></tr>
+    <tr><td>Quem é ADMIN pode apontar webhook, Telegram, checagem HTTP ou SMTP para qualquer destino (SSRF por administrador)</td><td>Dê ADMIN só a pessoas de confiança; restrinja a saída por firewall, se necessário.</td></tr>
+    <tr><td>As regras do <code>fingerprints.yml</code> são expressões regulares escritas pelo administrador (ReDoS)</td><td>Arquivo em <code>/var/lib/omnidude</code>, modo 600.</td></tr>
+    <tr><td>Bloqueio de login e limite de taxa ficam na memória e zeram ao reiniciar</td><td>Limite de requisições no proxy, se exposto à Internet.</td></tr>
+    <tr><td>O link do mapa público é uma credencial ao portador (sem senha nem expiração)</td><td><span class="ui">Gerar novo link</span> ou <span class="ui">Despublicar</span> ao suspeitar de vazamento.</td></tr>
+    <tr><td>A senha inicial gerada aparece uma vez no log</td><td>Troca obrigatória no primeiro login; ou defina <code>OMNIDUDE_ADMIN_PASSWORD</code> no arquivo de ambiente (modo 600).</td></tr>
+    <tr><td>SNMP v1 e v2c enviam a community em texto claro</td><td>Use SNMPv3 <code>authPriv</code> sempre que possível.</td></tr>
+  </tbody>
+</table>
+<h3 id="o-que-nao-foi-coberto">O que não foi coberto<a class="anchor" href="#o-que-nao-foi-coberto" aria-label="Link para esta seção">#</a></h3>
+<p>Teste de intrusão externo, <em>fuzzing</em> dos protocolos (SNMP, CDP, MNDP) e validação contra equipamentos reais. A interface (JavaScript) não tem testes automatizados.</p>
+
+<h2 id="relatar-uma-vulnerabilidade">Relatar uma vulnerabilidade<a class="anchor" href="#relatar-uma-vulnerabilidade" aria-label="Link para esta seção">#</a></h2>
+<p><strong>Não abra uma issue pública.</strong> Use o relato privado de vulnerabilidades do GitHub: na página do repositório, aba <em>Security</em> → <em>Report a vulnerability</em>. Descreva o que foi encontrado, o impacto e como reproduzir (versão, configuração, uma requisição de exemplo). Ações que exigem o papel ADMIN já concedido (por exemplo, apontar um webhook para um endereço interno) estão fora do escopo; veja <code>SECURITY.md</code>.</p>
+
+</article>
+<nav class="pager" aria-label="Navegação entre capítulos"><a class="prev" href="administracao.html"><small>Anterior</small>Administração</a><a class="next" href="api.html"><small>Próximo</small>API REST</a></nav>
+    <footer class="foot">
+      <p>OmniDude NMS · versão 0.1.0 · O manual descreve o que a versão atual faz e, quando algo não foi validado em equipamento real, diz isso.</p>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="Nesta página"><h4>Nesta página</h4><ul><li class="l2"><a href="#padroes-seguros">Padrões seguros</a></li><li class="l2"><a href="#lista-de-verificacao-para-producao">Lista de verificação para produção</a></li><li class="l2"><a href="#riscos-aceitos">Riscos aceitos</a></li><li class="l3"><a href="#o-que-nao-foi-coberto">O que não foi coberto</a></li><li class="l2"><a href="#relatar-uma-vulnerabilidade">Relatar uma vulnerabilidade</a></li></ul></aside>
+</div>
+<div class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Imagem ampliada"><img alt=""><p></p></div>
+<script src="assets/search-index.js"></script>
+<script src="assets/manual.js"></script>
+</body>
+</html>
